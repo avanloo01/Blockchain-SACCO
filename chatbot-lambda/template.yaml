@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Blockchain SACCO Telegram bot Lambda stack
+
+Parameters:
+  TelegramBotToken:
+    Type: String
+    NoEcho: true
+    Description: Telegram bot token (set via deployment parameter)
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        APP_ENV: prod
+        TELEGRAM_API_BASE: https://api.telegram.org
+        TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
+        GOVERNANCE_THRESHOLD_USD: "100"
+        POOL_UTILIZATION_CAP_PERCENT: "60"
+        SERVICE_FEE_PERCENT: "1.0"
+
+Resources:
+  TelegramWebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src.app.lambda_handler
+      Events:
+        TelegramWebhook:
+          Type: Api
+          Properties:
+            Path: /telegram/webhook
+            Method: post
+
+  MonthlyContributionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src.scheduled.monthly_contribution_handler
+      Events:
+        MonthlyContributionSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 7 1 * ? *)
+
+  RepaymentReminderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src.scheduled.repayment_reminder_handler
+      Events:
+        DailyRepaymentSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 7 * * ? *)
+
+Outputs:
+  WebhookApiEndpoint:
+    Description: API Gateway endpoint for Telegram webhook
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/telegram/webhook"
