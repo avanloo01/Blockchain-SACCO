@@ -35,12 +35,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Build
-        run: sam build --template-file chatbot-lambda/template.yaml
+        working-directory: chatbot-lambda
+        run: sam build --template-file template.yaml
 
       - name: Deploy
+        working-directory: chatbot-lambda
         run: |
           sam deploy \
-            --template-file chatbot-lambda/.aws-sam/build/template.yaml \
+            --template-file .aws-sam/build/template.yaml \
             --stack-name "${{ secrets.SAM_STACK_NAME }}" \
             --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
