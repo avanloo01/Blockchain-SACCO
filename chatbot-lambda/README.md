@@ -32,8 +32,15 @@ Python AWS Lambda service for Telegram SACCO operations.
 
 ## Deployment Note
 
-- `template.yaml` expects `TelegramBotToken` as a SAM parameter.
-- Example deploy flag: `--parameter-overrides TelegramBotToken=your_token_here`
+- `template.yaml` currently includes a fixed `TELEGRAM_BOT_TOKEN` value for quick setup.
+- For production, move the token to Secrets Manager or deployment-time parameters.
+
+## Webhook Registration
+
+- Register webhook:
+	- `python3 scripts/register_webhook.py --webhook-url https://your-api-id.execute-api.region.amazonaws.com/Prod/telegram/webhook --show-info`
+- Optional secret header:
+	- Set `TELEGRAM_WEBHOOK_SECRET` in environment/template and Telegram will include `X-Telegram-Bot-Api-Secret-Token`.
 
 ## Next Implementation Steps
 

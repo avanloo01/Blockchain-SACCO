@@ -1,0 +1,51 @@
+name: Deploy Chatbot Lambda
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - chatbot-lambda/**
+      - .github/workflows/deploy-chatbot-lambda.yml
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Build
+        run: sam build --template-file chatbot-lambda/template.yaml
+
+      - name: Deploy
+        run: |
+          sam deploy \
+            --template-file chatbot-lambda/.aws-sam/build/template.yaml \
+            --stack-name "${{ secrets.SAM_STACK_NAME }}" \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --resolve-s3 \
+            --parameter-overrides \
+              TelegramBotToken="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+              TelegramWebhookSecret="${{ secrets.TELEGRAM_WEBHOOK_SECRET }}"
