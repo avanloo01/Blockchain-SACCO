@@ -15,7 +15,7 @@ def send_message(chat_id: str, text: str) -> dict:
     return payload
 
 
-def register_webhook(webhook_url: str) -> dict:
+def register_webhook(webhook_url: str, bot_token: str | None = None) -> dict:
     request_payload = {
         "url": webhook_url,
         "allowed_updates": ["message"],
@@ -24,27 +24,28 @@ def register_webhook(webhook_url: str) -> dict:
     if settings.telegram_webhook_secret:
         request_payload["secret_token"] = settings.telegram_webhook_secret
 
-    return _post("setWebhook", request_payload)
+    return _post("setWebhook", request_payload, bot_token=bot_token)
 
 
-def get_webhook_info() -> dict:
-    return _get("getWebhookInfo")
+def get_webhook_info(bot_token: str | None = None) -> dict:
+    return _get("getWebhookInfo", bot_token=bot_token)
 
 
-def _bot_method_url(method: str) -> str:
-    if not settings.telegram_bot_token:
+def _bot_method_url(method: str, bot_token: str | None = None) -> str:
+    token = bot_token or settings.telegram_bot_token
+    if not token:
         raise TelegramApiError("TELEGRAM_BOT_TOKEN is not configured")
-    return f"{settings.telegram_api_base}/bot{settings.telegram_bot_token}/{method}"
+    return f"{settings.telegram_api_base}/bot{token}/{method}"
 
 
-def _post(method: str, payload: dict) -> dict:
-    url = _bot_method_url(method)
+def _post(method: str, payload: dict, bot_token: str | None = None) -> dict:
+    url = _bot_method_url(method, bot_token=bot_token)
     response = requests.post(url, json=payload, timeout=15)
     return _parse_response(response=response, method=method)
 
 
-def _get(method: str) -> dict:
-    url = _bot_method_url(method)
+def _get(method: str, bot_token: str | None = None) -> dict:
+    url = _bot_method_url(method, bot_token=bot_token)
     response = requests.get(url, timeout=15)
     return _parse_response(response=response, method=method)
 

@@ -39,6 +39,8 @@ Python AWS Lambda service for Telegram SACCO operations.
 
 - Register webhook:
 	- `python3 scripts/register_webhook.py --webhook-url https://your-api-id.execute-api.region.amazonaws.com/Prod/telegram/webhook --show-info`
+- Register webhook with a one-off token (without storing it locally):
+	- `python3 scripts/register_webhook.py --webhook-url https://your-api-id.execute-api.region.amazonaws.com/Prod/telegram/webhook --bot-token "$TELEGRAM_BOT_TOKEN" --show-info`
 - Optional secret header:
 	- Set `TELEGRAM_WEBHOOK_SECRET` in environment/template and Telegram will include `X-Telegram-Bot-Api-Secret-Token`.
 
