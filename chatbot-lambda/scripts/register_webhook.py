@@ -17,6 +17,11 @@ def main() -> int:
         help="Telegram bot token (overrides TELEGRAM_BOT_TOKEN for this command only)",
     )
     parser.add_argument(
+        "--webhook-secret",
+        default="",
+        help="Webhook secret token (overrides TELEGRAM_WEBHOOK_SECRET for this command only)",
+    )
+    parser.add_argument(
         "--show-info",
         action="store_true",
         help="Fetch webhook info after registration",
@@ -24,8 +29,13 @@ def main() -> int:
     args = parser.parse_args()
 
     token_override = args.bot_token.strip() or None
+    secret_override = args.webhook_secret.strip() or None
 
-    result = register_webhook(webhook_url=args.webhook_url, bot_token=token_override)
+    result = register_webhook(
+        webhook_url=args.webhook_url,
+        bot_token=token_override,
+        secret_token=secret_override,
+    )
     print("setWebhook response:")
     print(json.dumps(result, indent=2))
 

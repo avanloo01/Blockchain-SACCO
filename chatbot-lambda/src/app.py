@@ -1,12 +1,19 @@
 import json
+import logging
 from typing import Any
 
-from src.config import settings
-from src.handlers.telegram_webhook import handle_telegram_update
+# Configure root logger so all src.* modules emit to CloudWatch at INFO level.
+logging.basicConfig(level=logging.INFO, force=True)
+
+from src.config import settings  # noqa: E402
+from src.handlers.telegram_webhook import handle_telegram_update  # noqa: E402
+
+logger = logging.getLogger(__name__)
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     if not _is_valid_telegram_secret(event):
+        logger.warning("Webhook request rejected: invalid or missing secret token")
         return {
             "statusCode": 401,
             "headers": {"Content-Type": "application/json"},
@@ -18,11 +25,14 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         try:
             payload = json.loads(body or "{}")
         except json.JSONDecodeError:
+            logger.error("Failed to parse request body as JSON")
             payload = {}
     else:
         payload = body or {}
 
+    logger.info("Processing update_id=%s", payload.get("update_id"))
     result = handle_telegram_update(payload)
+    logger.info("Update processed: ok=%s", result.get("ok"))
     return {
         "statusCode": 200,
         "headers": {"Content-Type": "application/json"},

@@ -15,14 +15,19 @@ def send_message(chat_id: str, text: str) -> dict:
     return payload
 
 
-def register_webhook(webhook_url: str, bot_token: str | None = None) -> dict:
+def register_webhook(
+    webhook_url: str,
+    bot_token: str | None = None,
+    secret_token: str | None = None,
+) -> dict:
     request_payload = {
         "url": webhook_url,
         "allowed_updates": ["message"],
         "drop_pending_updates": False,
     }
-    if settings.telegram_webhook_secret:
-        request_payload["secret_token"] = settings.telegram_webhook_secret
+    effective_secret = secret_token or settings.telegram_webhook_secret
+    if effective_secret:
+        request_payload["secret_token"] = effective_secret
 
     return _post("setWebhook", request_payload, bot_token=bot_token)
 
