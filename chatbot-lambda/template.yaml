@@ -12,6 +12,10 @@ Parameters:
     Default: ""
     NoEcho: true
     Description: Optional Telegram webhook secret set at deploy time
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+    Description: Supabase PostgreSQL connection URL (pooled)
 
 Globals:
   Function:
@@ -24,6 +28,7 @@ Globals:
         TELEGRAM_API_BASE: https://api.telegram.org
         TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
         TELEGRAM_WEBHOOK_SECRET: !Ref TelegramWebhookSecret
+        DATABASE_URL: !Ref DatabaseUrl
         GOVERNANCE_THRESHOLD_USD: "100"
         POOL_UTILIZATION_CAP_PERCENT: "60"
         SERVICE_FEE_PERCENT: "1.0"

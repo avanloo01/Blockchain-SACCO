@@ -1,0 +1,96 @@
+generator client {
+  provider             = "prisma-client-py"
+  interface            = "sync"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Member {
+  id                   String   @id @default(uuid())
+  telegramChatId       String   @unique @map("telegram_chat_id")
+  displayName          String?  @map("display_name")
+  joinedOn             DateTime @default(now()) @map("joined_on")
+  emailVerified        Boolean  @default(false) @map("email_verified")
+  phoneVerified        Boolean  @default(false) @map("phone_verified")
+  contributionTotalUsd Float    @default(0) @map("contribution_total_usd")
+  repaymentOnTimeRatio Float    @default(1.0) @map("repayment_on_time_ratio")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  billingIntents     BillingIntent[]
+  loanRequests       LoanRequest[]
+  repaymentSchedules RepaymentSchedule[]
+  messageDeliveries  MessageDelivery[]
+
+  @@map("members")
+}
+
+model BillingIntent {
+  id               String   @id @default(uuid())
+  memberId         String   @map("member_id")
+  amountUsd        Float    @map("amount_usd")
+  serviceFeeUsd    Float    @map("service_fee_usd")
+  netPoolAmountUsd Float    @map("net_pool_amount_usd")
+  asset            String   @default("USDC")
+  network          String   @default("Solana")
+  status           String   @default("pending")
+  idempotencyKey   String?  @unique @map("idempotency_key")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  member Member @relation(fields: [memberId], references: [id])
+
+  @@map("billing_intents")
+}
+
+model LoanRequest {
+  id             String   @id @default(uuid())
+  memberId       String   @map("member_id")
+  amountUsd      Float    @map("amount_usd")
+  tenureMonths   Int      @map("tenure_months")
+  governanceLane String   @map("governance_lane")
+  status         String   @default("pending")
+  reason         String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  member     Member              @relation(fields: [memberId], references: [id])
+  repayments RepaymentSchedule[]
+
+  @@map("loan_requests")
+}
+
+model RepaymentSchedule {
+  id            String    @id @default(uuid())
+  loanRequestId String    @map("loan_request_id")
+  memberId      String    @map("member_id")
+  amountUsd     Float     @map("amount_usd")
+  dueOn         DateTime  @map("due_on")
+  paidOn        DateTime? @map("paid_on")
+  status        String    @default("pending")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  loanRequest LoanRequest @relation(fields: [loanRequestId], references: [id])
+  member      Member      @relation(fields: [memberId], references: [id])
+
+  @@map("repayment_schedules")
+}
+
+model MessageDelivery {
+  id            String   @id @default(uuid())
+  memberId      String   @map("member_id")
+  campaign      String
+  messageText   String   @map("message_text")
+  telegramMsgId String?  @map("telegram_msg_id")
+  status        String   @default("queued")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  member Member @relation(fields: [memberId], references: [id])
+
+  @@map("message_delivery")
+}

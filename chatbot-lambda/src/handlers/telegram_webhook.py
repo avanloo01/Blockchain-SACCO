@@ -2,6 +2,8 @@ import logging
 from typing import Any
 
 from src.handlers.commands import dispatch_command
+from src.repositories.member_repo import get_member_by_chat_id
+from src.repositories.message_repo import record_delivery
 from src.services.telegram_api import TelegramApiError, send_message
 
 logger = logging.getLogger(__name__)
@@ -34,6 +36,20 @@ def handle_telegram_update(update: dict[str, Any]) -> dict[str, Any]:
 
     msg_id = send_result.get("result", {}).get("message_id")
     logger.info("Reply sent to chat_id=%s message_id=%s", chat_id_str, msg_id)
+
+    # Track delivery in DB (only if member exists)
+    try:
+        member = get_member_by_chat_id(telegram_chat_id=chat_id_str)
+        if member:
+            record_delivery(
+                member_id=member.id,
+                campaign="webhook_reply",
+                message_text=response_text[:500],
+                telegram_msg_id=str(msg_id) if msg_id else None,
+            )
+    except Exception:
+        logger.exception("Failed to record message delivery for chat_id=%s", chat_id_str)
+
     return {
         "ok": True,
         "update_id": update_id,
