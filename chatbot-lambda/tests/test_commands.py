@@ -32,7 +32,8 @@ def test_start_command_shows_signup_link() -> None:
 
 def test_help_command() -> None:
     message = dispatch_command(chat_id="123", text="/help")
-    assert "Use /contribute" in message
+    assert "/contribute" in message
+    assert "/verify" in message
     assert "/status" in message
 
 
@@ -43,13 +44,30 @@ def test_unregistered_user_gets_signup_prompt(_mock_member) -> None:
 
 
 @patch("src.handlers.commands.create_billing_intent")
+@patch("src.handlers.commands.get_payment_provider")
 @patch("src.handlers.commands.get_member_by_chat_id")
-def test_contribute_with_amount_includes_fee_breakdown(mock_member, _mock_billing) -> None:
+def test_contribute_with_amount_includes_fee_breakdown(mock_member, mock_provider, _mock_billing) -> None:
     mock_member.return_value = _fake_member()
+    from src.services.payments.base import PaymentIntent, PaymentStatus
+    mock_provider.return_value.create_payment_intent.return_value = PaymentIntent(
+        intent_id="test-intent",
+        member_id="123",
+        amount_usd=25.0,
+        service_fee_usd=0.25,
+        net_pool_amount_usd=24.75,
+        asset="USDC",
+        network="solana_devnet",
+        status=PaymentStatus.PENDING,
+        recipient_address="TreasuryABC",
+        memo="sacco:test-intent",
+        payment_url="solana:TreasuryABC?amount=25.0",
+    )
     message = dispatch_command(chat_id="123", text="/contribute 25")
-    assert "Amount: 25.00 USD" in message
+    assert "25.00 USDC" in message
     assert "Fee:" in message
     assert "Net to pool:" in message
+    assert "TreasuryABC" in message
+    assert "/verify" in message
 
 
 @patch("src.handlers.commands.generate_repayment_schedule")

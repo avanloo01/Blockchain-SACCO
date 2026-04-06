@@ -31,17 +31,22 @@ model Member {
 }
 
 model BillingIntent {
-  id               String   @id @default(uuid())
-  memberId         String   @map("member_id")
-  amountUsd        Float    @map("amount_usd")
-  serviceFeeUsd    Float    @map("service_fee_usd")
-  netPoolAmountUsd Float    @map("net_pool_amount_usd")
-  asset            String   @default("USDC")
-  network          String   @default("Solana")
-  status           String   @default("pending")
-  idempotencyKey   String?  @unique @map("idempotency_key")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(uuid())
+  memberId          String   @map("member_id")
+  amountUsd         Float    @map("amount_usd")
+  serviceFeeUsd     Float    @map("service_fee_usd")
+  netPoolAmountUsd  Float    @map("net_pool_amount_usd")
+  asset             String   @default("USDC")
+  network           String   @default("solana_devnet")
+  status            String   @default("pending")
+  idempotencyKey    String?  @unique @map("idempotency_key")
+  recipientAddress  String?  @map("recipient_address")
+  txSignature       String?  @map("tx_signature")
+  memo              String?
+  paymentUrl        String?  @map("payment_url")
+  settledAt         DateTime? @map("settled_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   member Member @relation(fields: [memberId], references: [id])
 

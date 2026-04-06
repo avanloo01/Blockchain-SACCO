@@ -2,14 +2,19 @@ import logging
 
 from src.config import settings
 from src.policies.loan_policy import evaluate_loan_request
-from src.repositories.billing_repo import create_billing_intent
+from src.repositories.billing_repo import (
+    create_billing_intent,
+    get_billing_intent_by_idempotency_key,
+    mark_billing_settled,
+)
 from src.repositories.loan_repo import (
     create_loan_request,
     generate_repayment_schedule,
     get_pool_state,
 )
-from src.repositories.member_repo import get_member_by_chat_id, get_member_months
-from src.services.payment_links import build_direct_transfer_intent
+from src.repositories.member_repo import add_contribution, get_member_by_chat_id, get_member_months
+from src.services.payments import get_payment_provider
+from src.services.payments.base import PaymentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +38,9 @@ def dispatch_command(chat_id: str, text: str) -> str:
 
     if command == "/help":
         return (
-            "Use /contribute 25 to get a USDC transfer intent. "
-            "Use /loan_request 120 3 to request a 3-month loan. "
+            "Use /contribute 25 to get a USDC transfer intent.\n"
+            "Use /verify <intent_id> <tx_signature> to confirm a payment.\n"
+            "Use /loan_request 120 3 to request a 3-month loan.\n"
             "Use /status to view your membership summary."
         )
 
@@ -56,21 +62,68 @@ def dispatch_command(chat_id: str, text: str) -> str:
         amount_usd = _parse_positive_float(parts[1] if len(parts) > 1 else None, default=20.0)
         if amount_usd <= 0:
             return "Invalid amount. Example: /contribute 25"
-        intent = build_direct_transfer_intent(amount_usd=amount_usd, member_id=chat_id)
+
+        provider = get_payment_provider()
+        intent = provider.create_payment_intent(amount_usd=amount_usd, member_id=chat_id)
+
         create_billing_intent(
             member_id=member.id,
-            amount_usd=intent["amount_usd"],
-            service_fee_usd=intent["service_fee_usd"],
-            net_pool_amount_usd=intent["net_pool_amount_usd"],
-            idempotency_key=None,
+            amount_usd=intent.amount_usd,
+            service_fee_usd=intent.service_fee_usd,
+            net_pool_amount_usd=intent.net_pool_amount_usd,
+            idempotency_key=intent.intent_id,
+            recipient_address=intent.recipient_address,
+            memo=intent.memo,
+            payment_url=intent.payment_url,
+            network=intent.network,
         )
-        return (
-            "Contribution intent created. "
-            f"Amount: {intent['amount_usd']:.2f} USD, "
-            f"Fee: {intent['service_fee_usd']:.2f} USD, "
-            f"Net to pool: {intent['net_pool_amount_usd']:.2f} USD, "
-            "Asset: USDC on Solana."
+
+        lines = [
+            "Contribution intent created.",
+            f"Amount: {intent.amount_usd:.2f} USDC",
+            f"Fee: {intent.service_fee_usd:.2f} USDC",
+            f"Net to pool: {intent.net_pool_amount_usd:.2f} USDC",
+            f"Network: {intent.network}",
+            f"Send to: {intent.recipient_address}",
+        ]
+        if intent.memo:
+            lines.append(f"Memo: {intent.memo}")
+        if intent.payment_url:
+            lines.append(f"Payment link: {intent.payment_url}")
+        lines.append(f"\nAfter sending, verify with:\n/verify {intent.intent_id} <tx_signature>")
+        return "\n".join(lines)
+
+    if command == "/verify":
+        if len(parts) < 3:
+            return "Usage: /verify <intent_id> <tx_signature>"
+        intent_id = parts[1]
+        tx_signature = parts[2]
+
+        billing = get_billing_intent_by_idempotency_key(intent_id)
+        if billing is None or billing.memberId != member.id:
+            return "Payment intent not found. Check the intent ID from your /contribute message."
+        if billing.status == "confirmed":
+            return "This payment has already been confirmed."
+
+        provider = get_payment_provider()
+        result = provider.verify_payment_settlement(
+            intent_id=intent_id, tx_signature=tx_signature
         )
+
+        if result.status == PaymentStatus.CONFIRMED:
+            mark_billing_settled(intent_id=billing.id, tx_signature=tx_signature)
+            add_contribution(
+                telegram_chat_id=chat_id,
+                amount_usd=billing.netPoolAmountUsd,
+            )
+            return (
+                f"Payment confirmed! Tx: {tx_signature[:16]}...\n"
+                f"{billing.netPoolAmountUsd:.2f} USDC credited to your contribution balance."
+            )
+        elif result.status == PaymentStatus.PENDING:
+            return "Transaction found but not yet finalized. Please try again in a minute."
+        else:
+            return f"Verification failed: {result.error or 'transaction error on-chain'}"
 
     if command == "/loan_request":
         amount_usd = _parse_positive_float(parts[1] if len(parts) > 1 else None, default=120.0)
@@ -107,7 +160,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
             f"Max approval: {decision['max_loan_usd']:.2f} USD"
         )
 
-    return "Unknown command. Supported: /start, /help, /status, /contribute, /loan_request."
+    return "Unknown command. Supported: /start, /help, /status, /contribute, /verify, /loan_request."
 
 
 def _parse_positive_float(value: str | None, default: float) -> float:

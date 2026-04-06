@@ -16,6 +16,18 @@ Parameters:
     Type: String
     NoEcho: true
     Description: Supabase PostgreSQL connection URL (pooled)
+  PaymentProvider:
+    Type: String
+    Default: solana_testnet
+    Description: Payment provider key (solana_testnet, solana_mainnet)
+  SolanaTreasuryAddress:
+    Type: String
+    Default: ""
+    Description: Solana wallet address for receiving USDC contributions
+  SolanaRpcUrl:
+    Type: String
+    Default: "https://api.devnet.solana.com"
+    Description: Solana JSON-RPC endpoint
 
 Globals:
   Function:
@@ -32,6 +44,9 @@ Globals:
         GOVERNANCE_THRESHOLD_USD: "100"
         POOL_UTILIZATION_CAP_PERCENT: "60"
         SERVICE_FEE_PERCENT: "1.0"
+        PAYMENT_PROVIDER: !Ref PaymentProvider
+        SOLANA_TREASURY_ADDRESS: !Ref SolanaTreasuryAddress
+        SOLANA_RPC_URL: !Ref SolanaRpcUrl
 
 Resources:
   TelegramWebhookFunction:
@@ -67,6 +82,18 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: cron(0 7 * * ? *)
+
+  PaymentReconciliationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: src.scheduled.payment_reconciliation_handler
+      Timeout: 60
+      Events:
+        ReconciliationSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(15 minutes)
 
 Outputs:
   WebhookApiEndpoint:

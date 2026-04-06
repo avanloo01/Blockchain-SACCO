@@ -13,6 +13,9 @@ class Settings:
     governance_threshold_usd: float = float(os.getenv("GOVERNANCE_THRESHOLD_USD", "100"))
     pool_utilization_cap_percent: float = float(os.getenv("POOL_UTILIZATION_CAP_PERCENT", "60"))
     service_fee_percent: float = float(os.getenv("SERVICE_FEE_PERCENT", "1.0"))
+    payment_provider: str = os.getenv("PAYMENT_PROVIDER", "solana_testnet")
+    solana_treasury_address: str = os.getenv("SOLANA_TREASURY_ADDRESS", "")
+    solana_rpc_url: str = os.getenv("SOLANA_RPC_URL", "https://api.devnet.solana.com")
 
 
 settings = Settings()
