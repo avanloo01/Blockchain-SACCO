@@ -1,0 +1,57 @@
+.page {
+  max-width: 560px;
+  margin: 4rem auto;
+  padding: 0 1.25rem;
+}
+
+.title {
+  margin-bottom: 0.5rem;
+}
+
+.sub {
+  color: var(--foreground-muted);
+  margin-bottom: 2.5rem;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.step {
+  display: flex;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.stepNumber {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  color: var(--accent-light);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.stepContent h3 {
+  margin-bottom: 0.25rem;
+}
+
+.stepContent p {
+  color: var(--foreground-muted);
+  font-size: 0.92rem;
+}
+
+.cta {
+  margin-top: 2.5rem;
+  text-align: center;
+}

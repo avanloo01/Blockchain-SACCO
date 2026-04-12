@@ -14,6 +14,7 @@ model Member {
   id                   String   @id @default(uuid())
   telegramChatId       String   @unique @map("telegram_chat_id")
   displayName          String?  @map("display_name")
+  walletAddress        String?  @map("wallet_address")
   joinedOn             DateTime @default(now()) @map("joined_on")
   emailVerified        Boolean  @default(false) @map("email_verified")
   phoneVerified        Boolean  @default(false) @map("phone_verified")
@@ -24,6 +25,7 @@ model Member {
 
   billingIntents     BillingIntent[]
   loanRequests       LoanRequest[]
+  governanceVotes    GovernanceVote[]
   repaymentSchedules RepaymentSchedule[]
   messageDeliveries  MessageDelivery[]
 
@@ -65,6 +67,7 @@ model LoanRequest {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   member     Member              @relation(fields: [memberId], references: [id])
+  votes      GovernanceVote[]
   repayments RepaymentSchedule[]
 
   @@map("loan_requests")
@@ -98,4 +101,19 @@ model MessageDelivery {
   member Member @relation(fields: [memberId], references: [id])
 
   @@map("message_delivery")
+}
+
+model GovernanceVote {
+  id            String   @id @default(uuid())
+  loanRequestId String   @map("loan_request_id")
+  memberId      String   @map("member_id")
+  vote          String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  loanRequest LoanRequest @relation(fields: [loanRequestId], references: [id])
+  member      Member      @relation(fields: [memberId], references: [id])
+
+  @@unique([loanRequestId, memberId])
+  @@map("governance_votes")
 }

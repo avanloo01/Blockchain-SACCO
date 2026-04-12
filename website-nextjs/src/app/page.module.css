@@ -1,0 +1,58 @@
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 6rem 1.25rem 4rem;
+  gap: 1.5rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: var(--accent-light);
+}
+
+.headline {
+  max-width: 640px;
+}
+
+.sub {
+  max-width: 520px;
+  color: var(--foreground-muted);
+  font-size: 1.05rem;
+}
+
+.cta {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  padding: 2rem 0 5rem;
+}
+
+.featureCard {
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.featureTitle {
+  margin-bottom: 0.5rem;
+}
+
+.featureDesc {
+  color: var(--foreground-muted);
+  font-size: 0.92rem;
+}

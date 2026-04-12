@@ -7,6 +7,7 @@ from src.repositories.billing_repo import (
     get_billing_intent_by_idempotency_key,
     mark_billing_settled,
 )
+from src.repositories.governance_repo import cast_vote, get_vote_tally, list_open_vote_loans
 from src.repositories.loan_repo import (
     create_loan_request,
     generate_repayment_schedule,
@@ -41,6 +42,8 @@ def dispatch_command(chat_id: str, text: str) -> str:
             "Use /contribute 25 to get a USDC transfer intent.\n"
             "Use /verify <intent_id> <tx_signature> to confirm a payment.\n"
             "Use /loan_request 120 3 to request a 3-month loan.\n"
+            "Use /proposals to list active governance proposals.\n"
+            "Use /vote <loan_id> yes|no to cast your governance vote.\n"
             "Use /status to view your membership summary."
         )
 
@@ -160,7 +163,35 @@ def dispatch_command(chat_id: str, text: str) -> str:
             f"Max approval: {decision['max_loan_usd']:.2f} USD"
         )
 
-    return "Unknown command. Supported: /start, /help, /status, /contribute, /verify, /loan_request."
+    if command == "/proposals":
+        proposals = list_open_vote_loans(limit=8)
+        if not proposals:
+            return "No active governance proposals right now."
+
+        lines = ["Active governance proposals:"]
+        for p in proposals:
+            lines.append(
+                f"- {p['loan_id'][:8]} | {p['amount_usd']:.2f} USD | {int(p['tenure_months'])}mo | {p['created_on']}"
+            )
+        lines.append("\nVote with: /vote <loan_id> yes|no")
+        return "\n".join(lines)
+
+    if command == "/vote":
+        if len(parts) < 3:
+            return "Usage: /vote <loan_id> yes|no"
+        loan_id = parts[1]
+        choice = parts[2].lower()
+        if choice not in {"yes", "no"}:
+            return "Invalid vote. Use yes or no. Example: /vote <loan_id> yes"
+
+        cast_vote(loan_id=loan_id, member_id=member.id, vote=choice)
+        tally = get_vote_tally(loan_id=loan_id)
+        return (
+            f"Vote recorded: {choice.upper()} for loan {loan_id[:8]}...\n"
+            f"Current tally -> Yes: {tally['yes']} | No: {tally['no']} | Total: {tally['total']}"
+        )
+
+    return "Unknown command. Supported: /start, /help, /status, /contribute, /verify, /loan_request, /proposals, /vote."
 
 
 def _parse_positive_float(value: str | None, default: float) -> float:

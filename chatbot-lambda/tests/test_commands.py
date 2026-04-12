@@ -34,6 +34,8 @@ def test_help_command() -> None:
     message = dispatch_command(chat_id="123", text="/help")
     assert "/contribute" in message
     assert "/verify" in message
+    assert "/proposals" in message
+    assert "/vote" in message
     assert "/status" in message
 
 
@@ -101,3 +103,39 @@ def test_status_command(mock_member, _mm) -> None:
     message = dispatch_command(chat_id="123", text="/status")
     assert "250.00 USD" in message
     assert "Months active:" in message
+
+
+@patch("src.handlers.commands.list_open_vote_loans")
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_proposals_command(mock_member, mock_proposals) -> None:
+    mock_member.return_value = _fake_member()
+    mock_proposals.return_value = [
+        {
+            "loan_id": "loan-12345678",
+            "amount_usd": 150.0,
+            "tenure_months": 4,
+            "created_on": "2026-04-07",
+        }
+    ]
+    message = dispatch_command(chat_id="123", text="/proposals")
+    assert "Active governance proposals" in message
+    assert "loan-123" in message
+    assert "Vote with" in message
+
+
+@patch("src.handlers.commands.get_vote_tally")
+@patch("src.handlers.commands.cast_vote")
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_vote_command_records_vote(mock_member, _cast_vote, mock_tally) -> None:
+    mock_member.return_value = _fake_member(id="mem-001")
+    mock_tally.return_value = {"yes": 2, "no": 1, "total": 3}
+    message = dispatch_command(chat_id="123", text="/vote loan-1 yes")
+    assert "Vote recorded: YES" in message
+    assert "Yes: 2" in message
+
+
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_vote_command_rejects_invalid_choice(mock_member) -> None:
+    mock_member.return_value = _fake_member(id="mem-001")
+    message = dispatch_command(chat_id="123", text="/vote loan-1 maybe")
+    assert "Invalid vote" in message

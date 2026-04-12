@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from src.services.payments.base import PaymentIntent, PaymentStatus, SettlementResult
 from src.services.payments.solana_testnet import SolanaTestnetProvider
+from src.services.payments.transak import TransakProvider
 
 
 @patch("src.services.payments.solana_testnet.settings")
@@ -133,3 +134,150 @@ def test_verify_without_rpc_url(mock_settings):
 
     assert result.status == PaymentStatus.FAILED
     assert "SOLANA_RPC_URL" in result.error
+
+
+# ── Transak provider tests ──────────────────────────────────────────
+
+
+@patch("src.services.payments.transak.settings")
+def test_transak_create_payment_intent(mock_settings):
+    mock_settings.service_fee_percent = 1.0
+    mock_settings.transak_api_key = "test-api-key"
+    mock_settings.transak_wallet_address = "TreasuryWallet123"
+    mock_settings.transak_crypto_currency = "USDC"
+    mock_settings.transak_network = "solana"
+
+    provider = TransakProvider()
+    intent = provider.create_payment_intent(amount_usd=25.0, member_id="chat-42")
+
+    assert isinstance(intent, PaymentIntent)
+    assert intent.amount_usd == 25.0
+    assert intent.service_fee_usd == 0.25
+    assert intent.net_pool_amount_usd == 24.75
+    assert intent.asset == "USDC"
+    assert intent.network == "solana"
+    assert intent.status == PaymentStatus.PENDING
+    assert intent.recipient_address == "TreasuryWallet123"
+    assert "global.transak.com" in intent.payment_url
+    assert "apiKey=test-api-key" in intent.payment_url
+    assert "fiatAmount=25.0" in intent.payment_url
+
+
+@patch("src.services.payments.transak.settings")
+def test_transak_create_intent_uses_idempotency_key(mock_settings):
+    mock_settings.service_fee_percent = 1.0
+    mock_settings.transak_api_key = "test-api-key"
+    mock_settings.transak_wallet_address = "TreasuryWallet123"
+    mock_settings.transak_crypto_currency = "USDC"
+    mock_settings.transak_network = "solana"
+
+    provider = TransakProvider()
+    key = "my-idem-key"
+    intent = provider.create_payment_intent(
+        amount_usd=10.0, member_id="chat-1", idempotency_key=key
+    )
+    assert intent.intent_id == key
+    assert f"partnerOrderId={key}" in intent.payment_url
+
+
+@patch("src.services.payments.transak.settings")
+def test_transak_create_intent_raises_without_api_key(mock_settings):
+    mock_settings.transak_api_key = ""
+    mock_settings.transak_wallet_address = "TreasuryWallet123"
+    mock_settings.service_fee_percent = 1.0
+
+    provider = TransakProvider()
+    try:
+        provider.create_payment_intent(amount_usd=10.0, member_id="chat-1")
+        assert False, "Should have raised ValueError"
+    except ValueError as exc:
+        assert "TRANSAK_API_KEY" in str(exc)
+
+
+@patch("src.services.payments.transak.settings")
+def test_transak_create_intent_raises_without_wallet(mock_settings):
+    mock_settings.transak_api_key = "test-api-key"
+    mock_settings.transak_wallet_address = ""
+    mock_settings.service_fee_percent = 1.0
+
+    provider = TransakProvider()
+    try:
+        provider.create_payment_intent(amount_usd=10.0, member_id="chat-1")
+        assert False, "Should have raised ValueError"
+    except ValueError as exc:
+        assert "TRANSAK_WALLET_ADDRESS" in str(exc)
+
+
+@patch("src.services.payments.transak.requests.get")
+@patch("src.services.payments.transak.settings")
+def test_transak_verify_completed_order(mock_settings, mock_get):
+    mock_settings.transak_api_key = "test-api-key"
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "response": {"status": "COMPLETED", "id": "order-123"},
+    }
+    mock_get.return_value = mock_resp
+
+    provider = TransakProvider()
+    result = provider.verify_payment_settlement(
+        intent_id="intent-1", tx_signature="order-123"
+    )
+
+    assert result.status == PaymentStatus.CONFIRMED
+    assert result.tx_signature == "order-123"
+
+
+@patch("src.services.payments.transak.requests.get")
+@patch("src.services.payments.transak.settings")
+def test_transak_verify_pending_order(mock_settings, mock_get):
+    mock_settings.transak_api_key = "test-api-key"
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "response": {"status": "PROCESSING", "id": "order-456"},
+    }
+    mock_get.return_value = mock_resp
+
+    provider = TransakProvider()
+    result = provider.verify_payment_settlement(
+        intent_id="intent-1", tx_signature="order-456"
+    )
+
+    assert result.status == PaymentStatus.PENDING
+
+
+@patch("src.services.payments.transak.requests.get")
+@patch("src.services.payments.transak.settings")
+def test_transak_verify_failed_order(mock_settings, mock_get):
+    mock_settings.transak_api_key = "test-api-key"
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "response": {"status": "FAILED", "id": "order-789"},
+    }
+    mock_get.return_value = mock_resp
+
+    provider = TransakProvider()
+    result = provider.verify_payment_settlement(
+        intent_id="intent-1", tx_signature="order-789"
+    )
+
+    assert result.status == PaymentStatus.FAILED
+    assert "FAILED" in result.error
+
+
+@patch("src.services.payments.transak.settings")
+def test_transak_verify_without_api_key(mock_settings):
+    mock_settings.transak_api_key = ""
+
+    provider = TransakProvider()
+    result = provider.verify_payment_settlement(
+        intent_id="intent-1", tx_signature="order-000"
+    )
+
+    assert result.status == PaymentStatus.FAILED
+    assert "TRANSAK_API_KEY" in result.error

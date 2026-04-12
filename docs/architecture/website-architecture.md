@@ -56,3 +56,9 @@
 - Cache indexer responses for public dashboards to reduce cost.
 - Display last-updated timestamps for transparency pages.
 - Gracefully degrade if chain indexer is delayed.
+
+## Design
+ 
+- Black and blue, futuristic, but minimalist.
+- Responsive and functional on mobile devices.
+- Clear calls to action for signup and wallet connection.

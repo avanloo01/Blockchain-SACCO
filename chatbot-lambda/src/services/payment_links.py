@@ -1,14 +1,16 @@
 from src.config import settings
+from src.services.payments import get_payment_provider
 
 
 def build_direct_transfer_intent(amount_usd: float, member_id: str) -> dict[str, float | str]:
-    fee_usd = round(amount_usd * settings.service_fee_percent / 100.0, 2)
-    net_pool_amount_usd = round(amount_usd - fee_usd, 2)
+    provider = get_payment_provider()
+    intent = provider.create_payment_intent(amount_usd=amount_usd, member_id=member_id)
     return {
         "member_id": member_id,
-        "amount_usd": amount_usd,
-        "service_fee_usd": fee_usd,
-        "net_pool_amount_usd": net_pool_amount_usd,
-        "asset": "USDC",
-        "network": "Solana",
+        "amount_usd": intent.amount_usd,
+        "service_fee_usd": intent.service_fee_usd,
+        "net_pool_amount_usd": intent.net_pool_amount_usd,
+        "asset": intent.asset,
+        "network": intent.network,
+        "payment_url": intent.payment_url,
     }

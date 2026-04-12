@@ -93,7 +93,7 @@ Resources:
         ReconciliationSchedule:
           Type: Schedule
           Properties:
-            Schedule: rate(15 minutes)
+            Schedule: cron(0 6 * * ? *)
 
 Outputs:
   WebhookApiEndpoint:

@@ -1,0 +1,43 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+}
+
+.logoAccent {
+  color: var(--accent-light);
+}
+
+.links {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  list-style: none;
+}
+
+.link {
+  color: var(--foreground-muted);
+  font-size: 0.9rem;
+  transition: color 0.15s;
+}
+
+.link:hover {
+  color: var(--foreground);
+}
+
+@media (max-width: 640px) {
+  .links {
+    gap: 1rem;
+  }
+}
