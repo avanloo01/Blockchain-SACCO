@@ -54,4 +54,5 @@ jobs:
               DatabaseUrl="${{ secrets.DATABASE_URL }}" \
               PaymentProvider="${{ secrets.PAYMENT_PROVIDER }}" \
               SolanaTreasuryAddress="${{ secrets.SOLANA_TREASURY_ADDRESS }}" \
-              SolanaRpcUrl="${{ secrets.SOLANA_RPC_URL }}"
+              SolanaRpcUrl="${{ secrets.SOLANA_RPC_URL }}" \
+              TransakApiKey="${{ secrets.TRANSAK_API_KEY }}"

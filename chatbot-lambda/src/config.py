@@ -17,7 +17,7 @@ class Settings:
     solana_treasury_address: str = os.getenv("SOLANA_TREASURY_ADDRESS", "")
     solana_rpc_url: str = os.getenv("SOLANA_RPC_URL", "https://api.devnet.solana.com")
     transak_api_key: str = os.getenv("TRANSAK_API_KEY", "")
-    transak_wallet_address: str = os.getenv("TRANSAK_WALLET_ADDRESS", "")
+    transak_wallet_address: str = os.getenv("TRANSAK_WALLET_ADDRESS", "") or os.getenv("SOLANA_TREASURY_ADDRESS", "")
     transak_crypto_currency: str = os.getenv("TRANSAK_CRYPTO_CURRENCY", "USDC")
     transak_network: str = os.getenv("TRANSAK_NETWORK", "solana")
 

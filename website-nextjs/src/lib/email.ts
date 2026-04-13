@@ -3,7 +3,7 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_ADDRESS =
-  process.env.RESEND_FROM_EMAIL || "Blockchain SACCO <onboarding@resend.dev>";
+  process.env.RESEND_FROM_EMAIL || "Blockchain SACCO <noreply@lemaiyanlabs.org>";
 
 export async function sendVerificationEmail(
   to: string,
