@@ -20,6 +20,23 @@ interface LoanRow {
   created_at: string;
 }
 
+interface BillingRow {
+  id: string;
+  amount_usd: number;
+  service_fee_usd: number;
+  net_pool_amount_usd: number;
+  status: string;
+  created_at: string;
+}
+
+interface RepaymentRow {
+  id: string;
+  amount_usd: number;
+  due_on: string;
+  paid_on: string | null;
+  status: string;
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -48,11 +65,27 @@ export async function GET() {
     ),
   );
 
-  const { data: loans } = await supabaseQuery<LoanRow[]>("loan_requests", {
-    select: "id,amount_usd,tenure_months,status,governance_lane,created_at",
-    member_id: `eq.${member.id}`,
-    order: "created_at.desc",
-  });
+  const [{ data: loans }, { data: contributions }, { data: repayments }] =
+    await Promise.all([
+      supabaseQuery<LoanRow[]>("loan_requests", {
+        select:
+          "id,amount_usd,tenure_months,status,governance_lane,created_at",
+        member_id: `eq.${member.id}`,
+        order: "created_at.desc",
+      }),
+      supabaseQuery<BillingRow[]>("billing_intents", {
+        select:
+          "id,amount_usd,service_fee_usd,net_pool_amount_usd,status,created_at",
+        member_id: `eq.${member.id}`,
+        order: "created_at.desc",
+        limit: "50",
+      }),
+      supabaseQuery<RepaymentRow[]>("repayment_schedules", {
+        select: "id,amount_usd,due_on,paid_on,status",
+        member_id: `eq.${member.id}`,
+        order: "due_on.asc",
+      }),
+    ]);
 
   return NextResponse.json({
     display_name: member.display_name,
@@ -67,6 +100,21 @@ export async function GET() {
       status: l.status,
       governance_lane: l.governance_lane,
       created_at: l.created_at,
+    })),
+    contributions: (contributions || []).map((c) => ({
+      id: c.id,
+      amount_usd: c.amount_usd,
+      service_fee_usd: c.service_fee_usd,
+      net_pool_amount_usd: c.net_pool_amount_usd,
+      status: c.status,
+      created_at: c.created_at,
+    })),
+    repayments: (repayments || []).map((r) => ({
+      id: r.id,
+      amount_usd: r.amount_usd,
+      due_on: r.due_on,
+      paid_on: r.paid_on,
+      status: r.status,
     })),
   });
 }

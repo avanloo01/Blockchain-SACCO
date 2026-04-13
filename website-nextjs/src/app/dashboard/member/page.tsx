@@ -19,6 +19,21 @@ interface MemberData {
     governance_lane: string;
     created_at: string;
   }[];
+  contributions: {
+    id: string;
+    amount_usd: number;
+    service_fee_usd: number;
+    net_pool_amount_usd: number;
+    status: string;
+    created_at: string;
+  }[];
+  repayments: {
+    id: string;
+    amount_usd: number;
+    due_on: string;
+    paid_on: string | null;
+    status: string;
+  }[];
 }
 
 function fmt(n: number) {
@@ -131,6 +146,85 @@ export default function MemberDashboard() {
                     </span>
                   </td>
                   <td>{new Date(loan.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className={styles.section}>
+        <h3 style={{ marginBottom: "1rem" }}>Contribution History</h3>
+        {data.contributions.length === 0 ? (
+          <p style={{ color: "var(--foreground-muted)" }}>
+            No contributions yet. Use <code>/contribute</code> in the Telegram
+            bot to make your first deposit.
+          </p>
+        ) : (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Amount</th>
+                <th>Fee</th>
+                <th>Net to Pool</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.contributions.map((c) => (
+                <tr key={c.id}>
+                  <td>${fmt(c.amount_usd)}</td>
+                  <td>${fmt(c.service_fee_usd)}</td>
+                  <td>${fmt(c.net_pool_amount_usd)}</td>
+                  <td>
+                    <span
+                      className={`${styles.badge} ${statusClass(c.status)}`}
+                    >
+                      {c.status}
+                    </span>
+                  </td>
+                  <td>{new Date(c.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className={styles.section}>
+        <h3 style={{ marginBottom: "1rem" }}>Repayment Schedule</h3>
+        {data.repayments.length === 0 ? (
+          <p style={{ color: "var(--foreground-muted)" }}>
+            No repayments scheduled.
+          </p>
+        ) : (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Amount</th>
+                <th>Due</th>
+                <th>Paid</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.repayments.map((r) => (
+                <tr key={r.id}>
+                  <td>${fmt(r.amount_usd)}</td>
+                  <td>{new Date(r.due_on).toLocaleDateString()}</td>
+                  <td>
+                    {r.paid_on
+                      ? new Date(r.paid_on).toLocaleDateString()
+                      : "\u2014"}
+                  </td>
+                  <td>
+                    <span
+                      className={`${styles.badge} ${statusClass(r.status)}`}
+                    >
+                      {r.status}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes, createHash } from "crypto";
 import { supabaseInsert } from "@/lib/supabase";
+import { isRateLimited, getClientIp } from "@/lib/rate-limit";
+import { sendVerificationEmail } from "@/lib/email";
 
 interface MemberRow {
   id: string;
@@ -8,7 +11,21 @@ interface MemberRow {
   wallet_address: string | null;
 }
 
+function generateVerificationToken(): { raw: string; hashed: string } {
+  const raw = randomBytes(32).toString("hex");
+  const hashed = createHash("sha256").update(raw).digest("hex");
+  return { raw, hashed };
+}
+
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req.headers);
+  if (isRateLimited(`signup:${ip}`)) {
+    return NextResponse.json(
+      { error: "Too many requests, please try again later" },
+      { status: 429 },
+    );
+  }
+
   const body = await req.json();
   const { email, phone, walletAddress } = body as {
     email?: string;
@@ -23,11 +40,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const { raw: token, hashed } = generateVerificationToken();
+
   const { data, error } = await supabaseInsert<MemberRow[]>("members", {
     email,
     phone,
     wallet_address: walletAddress || null,
     display_name: email.split("@")[0],
+    email_verification_token: hashed,
   });
 
   if (error === "duplicate") {
@@ -42,6 +62,14 @@ export async function POST(req: NextRequest) {
       { error: "Failed to create account" },
       { status: 500 },
     );
+  }
+
+  // Send verification email via Resend.
+  const verifyUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/auth/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
+  const emailResult = await sendVerificationEmail(email, verifyUrl);
+
+  if (!emailResult.success) {
+    console.error("Failed to send verification email:", emailResult.error);
   }
 
   return NextResponse.json({

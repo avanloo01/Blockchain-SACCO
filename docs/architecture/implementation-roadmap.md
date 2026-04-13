@@ -48,13 +48,13 @@
 - [x] Governance page listing active/passed/rejected proposals with vote tallies.
 - [x] Interest rate calculation: base rate + risk premium - loyalty discount (formula-based, APR returned in policy result).
 
-## Phase 5: Hardening and Pilot Launch (Week 6) [TODO]
+## Phase 5: Hardening and Pilot Launch (Week 6) [DONE]
 
-- [ ] Email verification flow: send verification email on signup, set email_verified flag on confirmation.
-- [ ] Rate limiting on webhook endpoint and API routes to prevent abuse.
-- [ ] Webhook replay protection: validate timestamp freshness on incoming Telegram updates.
-- [ ] Secrets audit: confirm all sensitive values are in GitHub Secrets and SAM parameter store, not in code.
-- [ ] Contribution history and repayment schedule views on the member dashboard.
+- [x] Email verification flow: send verification email on signup, set email_verified flag on confirmation.
+- [x] Rate limiting on webhook endpoint and API routes to prevent abuse.
+- [x] Webhook replay protection: validate timestamp freshness on incoming Telegram updates.
+- [x] Secrets audit: confirm all sensitive values are in GitHub Secrets and SAM parameter store, not in code.
+- [x] Contribution history and repayment schedule views on the member dashboard.
 
 ## Post-MVP (After Pilot)
 

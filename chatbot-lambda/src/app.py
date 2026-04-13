@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from typing import Any
 
 # Configure root logger so all src.* modules emit to CloudWatch at INFO level.
@@ -7,6 +8,7 @@ logging.basicConfig(level=logging.INFO, force=True)
 
 from src.config import settings  # noqa: E402
 from src.handlers.telegram_webhook import handle_telegram_update  # noqa: E402
+from src.rate_limit import is_rate_limited  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,28 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             payload = {}
     else:
         payload = body or {}
+
+    # Rate limit per chat_id to prevent abuse from a single user.
+    chat_id = str(
+        (payload.get("message") or {}).get("chat", {}).get("id", "unknown")
+    )
+    if is_rate_limited(chat_id):
+        logger.warning("Rate limited chat_id=%s", chat_id)
+        return {
+            "statusCode": 429,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"ok": False, "error": "rate limited"}),
+        }
+
+    # Replay protection: reject updates with a message date older than 60s.
+    msg_date = (payload.get("message") or {}).get("date")
+    if msg_date and abs(time.time() - msg_date) > 60:
+        logger.warning("Stale update rejected: date=%s", msg_date)
+        return {
+            "statusCode": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"ok": True, "skipped": "stale update"}),
+        }
 
     logger.info("Processing update_id=%s", payload.get("update_id"))
     result = handle_telegram_update(payload)

@@ -19,6 +19,7 @@ model Member {
   walletAddress        String?  @map("wallet_address")
   joinedOn             DateTime @default(now()) @map("joined_on")
   emailVerified        Boolean  @default(false) @map("email_verified")
+  emailVerificationToken String? @map("email_verification_token")
   phoneVerified        Boolean  @default(false) @map("phone_verified")
   contributionTotalUsd Float    @default(0) @map("contribution_total_usd")
   repaymentOnTimeRatio Float    @default(1.0) @map("repayment_on_time_ratio")
