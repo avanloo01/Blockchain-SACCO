@@ -55,4 +55,5 @@ jobs:
               PaymentProvider="${{ secrets.PAYMENT_PROVIDER }}" \
               SolanaTreasuryAddress="${{ secrets.SOLANA_TREASURY_ADDRESS }}" \
               SolanaRpcUrl="${{ secrets.SOLANA_RPC_URL }}" \
-              TransakApiKey="${{ secrets.TRANSAK_API_KEY }}"
+              MoonpayApiKey="${{ secrets.MOONPAY_API_KEY }}" \
+              MoonpaySecretKey="${{ secrets.MOONPAY_SECRET_KEY }}"

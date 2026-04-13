@@ -1,11 +1,11 @@
 from src.config import settings
 from src.services.payments.base import PaymentProvider
+from src.services.payments.moonpay import MoonpayProvider
 from src.services.payments.solana_testnet import SolanaTestnetProvider
-from src.services.payments.transak import TransakProvider
 
 _PROVIDERS: dict[str, type[PaymentProvider]] = {
     "solana_testnet": SolanaTestnetProvider,
-    "transak": TransakProvider,
+    "moonpay": MoonpayProvider,
 }
 
 _instance: PaymentProvider | None = None

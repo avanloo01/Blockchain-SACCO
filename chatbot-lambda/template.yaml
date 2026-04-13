@@ -18,8 +18,8 @@ Parameters:
     Description: Supabase PostgreSQL connection URL (pooled)
   PaymentProvider:
     Type: String
-    Default: transak
-    Description: Payment provider key (transak, solana_testnet, solana_mainnet)
+    Default: moonpay
+    Description: Payment provider key (moonpay, solana_testnet, solana_mainnet)
   SolanaTreasuryAddress:
     Type: String
     Default: ""
@@ -28,11 +28,16 @@ Parameters:
     Type: String
     Default: "https://api.devnet.solana.com"
     Description: Solana JSON-RPC endpoint
-  TransakApiKey:
+  MoonpayApiKey:
     Type: String
     Default: ""
     NoEcho: true
-    Description: Transak API key for fiat/crypto on-ramp
+    Description: MoonPay publishable API key for on-ramp widget
+  MoonpaySecretKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: MoonPay secret API key for transaction verification
 
 Globals:
   Function:
@@ -41,7 +46,7 @@ Globals:
     MemorySize: 256
     Environment:
       Variables:
-        APP_ENV: prod
+        APP_ENV: dev
         TELEGRAM_API_BASE: https://api.telegram.org
         TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
         TELEGRAM_WEBHOOK_SECRET: !Ref TelegramWebhookSecret
@@ -52,8 +57,9 @@ Globals:
         PAYMENT_PROVIDER: !Ref PaymentProvider
         SOLANA_TREASURY_ADDRESS: !Ref SolanaTreasuryAddress
         SOLANA_RPC_URL: !Ref SolanaRpcUrl
-        TRANSAK_API_KEY: !Ref TransakApiKey
-        TRANSAK_WALLET_ADDRESS: !Ref SolanaTreasuryAddress
+        MOONPAY_API_KEY: !Ref MoonpayApiKey
+        MOONPAY_SECRET_KEY: !Ref MoonpaySecretKey
+        MOONPAY_WALLET_ADDRESS: !Ref SolanaTreasuryAddress
 
 Resources:
   TelegramWebhookFunction:
