@@ -40,3 +40,37 @@ export async function supabaseQuery<T>(
   const data = (await res.json()) as T;
   return { data, error: null };
 }
+
+export async function supabaseInsert<T>(
+  table: string,
+  body: Record<string, unknown>,
+): Promise<SupabaseQueryResult<T>> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    return { data: null, error: "Supabase not configured" };
+  }
+
+  const url = new URL(`/rest/v1/${table}`, SUPABASE_URL);
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (res.status === 409) {
+    return { data: null, error: "duplicate" };
+  }
+
+  if (!res.ok) {
+    return { data: null, error: `Supabase ${res.status}: ${res.statusText}` };
+  }
+
+  const data = (await res.json()) as T;
+  return { data, error: null };
+}

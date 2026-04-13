@@ -26,11 +26,11 @@ export async function GET() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // Look up member by email (members table stores email in display_name for MVP,
-  // or you can add an email column later).
+  // Look up member by email from the authenticated session.
   const { data: members } = await supabaseQuery<MemberRow[]>("members", {
     select:
       "id,display_name,joined_on,contribution_total_usd,repayment_on_time_ratio",
+    email: `eq.${session.user.email}`,
     limit: "1",
   });
 

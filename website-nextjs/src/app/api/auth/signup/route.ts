@@ -1,4 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseInsert } from "@/lib/supabase";
+
+interface MemberRow {
+  id: string;
+  email: string;
+  phone: string;
+  wallet_address: string | null;
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -15,8 +23,30 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // TODO: Create member in Supabase Auth and members table.
-  // Store walletAddress on the member record if provided.
-  // For now, return success so the signup flow can be tested end-to-end.
-  return NextResponse.json({ ok: true, email, walletAddress: walletAddress ?? null });
+  const { data, error } = await supabaseInsert<MemberRow[]>("members", {
+    email,
+    phone,
+    wallet_address: walletAddress || null,
+    display_name: email.split("@")[0],
+  });
+
+  if (error === "duplicate") {
+    return NextResponse.json(
+      { error: "An account with this email already exists" },
+      { status: 409 },
+    );
+  }
+
+  if (error || !data || data.length === 0) {
+    return NextResponse.json(
+      { error: "Failed to create account" },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    email,
+    walletAddress: walletAddress ?? null,
+  });
 }

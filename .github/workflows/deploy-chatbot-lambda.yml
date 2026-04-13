@@ -50,4 +50,8 @@ jobs:
             --resolve-s3 \
             --parameter-overrides \
               TelegramBotToken="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
-              TelegramWebhookSecret="${{ secrets.TELEGRAM_WEBHOOK_SECRET }}"
+              TelegramWebhookSecret="${{ secrets.TELEGRAM_WEBHOOK_SECRET }}" \
+              DatabaseUrl="${{ secrets.DATABASE_URL }}" \
+              PaymentProvider="${{ secrets.PAYMENT_PROVIDER }}" \
+              SolanaTreasuryAddress="${{ secrets.SOLANA_TREASURY_ADDRESS }}" \
+              SolanaRpcUrl="${{ secrets.SOLANA_RPC_URL }}"
