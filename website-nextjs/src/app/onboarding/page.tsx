@@ -1,12 +1,14 @@
 import Link from "next/link";
 import styles from "./page.module.css";
 
+const TELEGRAM_BOT_URL = "https://t.me/Lemaiyan_labs_bot";
+
 export default function OnboardingPage() {
   return (
     <div className={styles.page}>
       <h2 className={styles.title}>Get started in 3 steps</h2>
       <p className={styles.sub}>
-        Link your Telegram account and you can begin contributing right away.
+        Verify your email, link Telegram with your phone number, and you can begin contributing right away.
       </p>
 
       <div className={styles.steps}>
@@ -25,8 +27,12 @@ export default function OnboardingPage() {
           <div className={styles.stepContent}>
             <h3>Link Telegram</h3>
             <p>
-              Open our Telegram bot and send <code>/start</code>. The bot will
-              link your chat ID to your SACCO account automatically.
+              Open{" "}
+              <a href={TELEGRAM_BOT_URL} target="_blank" rel="noopener noreferrer">
+                @Lemaiyan_labs_bot
+              </a>{" "}
+              on Telegram, send <code>/start</code>, then tap <code>Share phone number</code>.
+              The bot will match it with the phone number you used during signup.
             </p>
           </div>
         </div>
@@ -36,8 +42,8 @@ export default function OnboardingPage() {
           <div className={styles.stepContent}>
             <h3>Make your first contribution</h3>
             <p>
-              Send <code>/contribute 20</code> in the bot to get a Transak
-              payment link. Complete the payment to contribute USDC to the SACCO pool.
+              Send <code>/contribute 20</code> in the bot to get a payment link.
+              Complete the payment to contribute USDC to the SACCO pool.
             </p>
           </div>
         </div>

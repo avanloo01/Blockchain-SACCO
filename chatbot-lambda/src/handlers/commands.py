@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 _SIGNUP_PROMPT = (
     "You need to sign up first. "
-    f"Register at {settings.website_url}/signup and link your Telegram account."
+    f"Register at {settings.website_url}/signup using the same phone number as your Telegram account, "
+    "then come back here and tap Share phone number to link your Telegram account."
 )
 
 
@@ -30,10 +31,18 @@ def dispatch_command(chat_id: str, text: str) -> str:
     command = parts[0].lower() if parts else ""
 
     if text.startswith("/start"):
+        member = get_member_by_chat_id(telegram_chat_id=chat_id)
+        if member is not None:
+            return (
+                "Welcome back to Blockchain SACCO!\n\n"
+                "Your Telegram account is linked.\n\n"
+                "Use /help to see available commands."
+            )
         return (
             f"Welcome to Blockchain SACCO!\n\n"
-            f"To get started, sign up at {settings.website_url}/signup "
-            f"and link your Telegram account.\n\n"
+            f"First, sign up at {settings.website_url}/signup using the same phone number "
+            f"you use on Telegram.\n"
+            f"Then tap Share phone number here so I can link your Telegram account.\n\n"
             f"Once registered, use /help to see available commands."
         )
 

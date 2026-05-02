@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import styles from "./page.module.css";
 
+const TELEGRAM_BOT_URL = "https://t.me/Lemaiyan_labs_bot";
+
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -30,6 +32,21 @@ export default function SignupPage() {
           We sent a verification link to <strong>{email}</strong>. Click it to
           activate your account, then continue to onboarding.
         </p>
+        <p className={styles.telegramHint}>
+          After verifying, open{" "}
+          <a href={TELEGRAM_BOT_URL} target="_blank" rel="noopener noreferrer">
+            @Lemaiyan_labs_bot
+          </a>{" "}
+          on Telegram and send <strong>/start</strong>.
+        </p>
+        <a
+          href={TELEGRAM_BOT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`btn ${styles.telegramButton}`}
+        >
+          Open Telegram Bot
+        </a>
         <Link href="/onboarding" className="btn btn-primary" style={{ width: "100%" }}>
           Continue to Onboarding
         </Link>
@@ -68,6 +85,13 @@ export default function SignupPage() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
+          <p className={styles.hint}>
+            Use the same phone number you use on Telegram. You&apos;ll link it later with{" "}
+            <a href={TELEGRAM_BOT_URL} target="_blank" rel="noopener noreferrer">
+              @Lemaiyan_labs_bot
+            </a>
+            .
+          </p>
         </div>
         <div className={styles.field}>
           <label htmlFor="wallet">Wallet address (optional)</label>

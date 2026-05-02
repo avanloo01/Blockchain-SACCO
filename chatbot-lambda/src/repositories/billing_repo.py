@@ -1,9 +1,13 @@
 import logging
 from datetime import datetime, timezone
-
-from prisma.models import BillingIntent
+from typing import TYPE_CHECKING, Any
 
 from src.db import get_db
+
+if TYPE_CHECKING:
+    from prisma.models import BillingIntent
+else:
+    BillingIntent = Any
 
 logger = logging.getLogger(__name__)
 

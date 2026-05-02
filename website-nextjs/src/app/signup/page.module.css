@@ -54,6 +54,22 @@
   text-decoration: underline;
 }
 
+.telegramHint {
+  font-size: 0.9rem;
+  color: var(--foreground-muted);
+  margin-bottom: 1rem;
+}
+
+.telegramHint a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.telegramButton {
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
 .submit {
   width: 100%;
 }

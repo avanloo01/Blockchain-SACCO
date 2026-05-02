@@ -24,7 +24,8 @@ def _fake_member(**overrides):
     return m
 
 
-def test_start_command_shows_signup_link() -> None:
+@patch("src.handlers.commands.get_member_by_chat_id", return_value=None)
+def test_start_command_shows_signup_link(_mock_member) -> None:
     message = dispatch_command(chat_id="123", text="/start")
     assert "sign up" in message.lower()
     assert "/signup" in message

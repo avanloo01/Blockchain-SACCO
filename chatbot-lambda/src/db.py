@@ -1,6 +1,10 @@
 import logging
+from typing import TYPE_CHECKING, Any
 
-from prisma import Prisma
+if TYPE_CHECKING:
+    from prisma import Prisma
+else:
+    Prisma = Any
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +15,9 @@ def get_db() -> Prisma:
     """Return a connected Prisma client, creating one on first call."""
     global _client
     if _client is None or not _client.is_connected():
-        _client = Prisma()
+        from prisma import Prisma as PrismaClient
+
+        _client = PrismaClient()
         _client.connect()
         logger.info("Prisma client connected")
     return _client

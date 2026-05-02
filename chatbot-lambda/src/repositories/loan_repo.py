@@ -1,10 +1,15 @@
 import logging
 from datetime import datetime, timedelta, timezone
-
-from prisma.models import LoanRequest as LoanRequestRow
-from prisma.models import RepaymentSchedule
+from typing import TYPE_CHECKING, Any
 
 from src.db import get_db
+
+if TYPE_CHECKING:
+    from prisma.models import LoanRequest as LoanRequestRow
+    from prisma.models import RepaymentSchedule
+else:
+    LoanRequestRow = Any
+    RepaymentSchedule = Any
 
 logger = logging.getLogger(__name__)
 

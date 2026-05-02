@@ -1,8 +1,12 @@
 import logging
-
-from prisma.models import MessageDelivery
+from typing import TYPE_CHECKING, Any
 
 from src.db import get_db
+
+if TYPE_CHECKING:
+    from prisma.models import MessageDelivery
+else:
+    MessageDelivery = Any
 
 logger = logging.getLogger(__name__)
 
