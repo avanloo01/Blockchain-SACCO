@@ -36,6 +36,14 @@
   color: var(--foreground);
 }
 
+.cta {
+  color: #fff;
+}
+
+.cta:hover {
+  color: #fff;
+}
+
 @media (max-width: 640px) {
   .links {
     gap: 1rem;
