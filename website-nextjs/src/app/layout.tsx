@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "Blockchain SACCO",
   description:
     "Community savings and credit cooperative powered by Solana and USDC.",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
