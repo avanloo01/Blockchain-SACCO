@@ -11,6 +11,37 @@ export interface SupabaseQueryResult<T> {
   error: string | null;
 }
 
+interface PostgrestErrorBody {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+}
+
+async function formatSupabaseError(res: Response): Promise<string> {
+  const fallback = `Supabase ${res.status}: ${res.statusText}`;
+  const raw = await res.text();
+
+  if (!raw) {
+    return fallback;
+  }
+
+  try {
+    const body = JSON.parse(raw) as PostgrestErrorBody;
+    const parts = [body.code, body.message, body.details, body.hint].filter(
+      (part): part is string => Boolean(part),
+    );
+
+    if (parts.length === 0) {
+      return `${fallback} - ${raw}`;
+    }
+
+    return `${fallback} - ${parts.join(" | ")}`;
+  } catch {
+    return `${fallback} - ${raw}`;
+  }
+}
+
 export async function supabaseQuery<T>(
   table: string,
   params: Record<string, string> = {},
@@ -34,7 +65,7 @@ export async function supabaseQuery<T>(
   });
 
   if (!res.ok) {
-    return { data: null, error: `Supabase ${res.status}: ${res.statusText}` };
+    return { data: null, error: await formatSupabaseError(res) };
   }
 
   const data = (await res.json()) as T;
@@ -68,7 +99,7 @@ export async function supabaseUpdate<T>(
   });
 
   if (!res.ok) {
-    return { data: null, error: `Supabase ${res.status}: ${res.statusText}` };
+    return { data: null, error: await formatSupabaseError(res) };
   }
 
   const data = (await res.json()) as T;
@@ -102,7 +133,7 @@ export async function supabaseInsert<T>(
   }
 
   if (!res.ok) {
-    return { data: null, error: `Supabase ${res.status}: ${res.statusText}` };
+    return { data: null, error: await formatSupabaseError(res) };
   }
 
   const data = (await res.json()) as T;
