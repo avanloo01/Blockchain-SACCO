@@ -34,6 +34,17 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      - name: Install Python dependencies
+        working-directory: chatbot-lambda
+        run: python -m pip install -r requirements.txt
+
+      - name: Generate Prisma client
+        working-directory: chatbot-lambda
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL || secrets.DATABASE_URL }}
+        run: python -m prisma generate --schema prisma/schema.prisma
+
       - name: Build
         working-directory: chatbot-lambda
         run: sam build --template-file template.yaml

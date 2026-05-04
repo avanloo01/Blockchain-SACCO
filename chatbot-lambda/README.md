@@ -26,8 +26,10 @@ Python AWS Lambda service for Telegram SACCO operations.
 1. Create and activate a virtual environment.
 2. Install dependencies:
 	- `pip install -r requirements.txt`
-3. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN`.
-3. Run tests:
+3. Generate the Prisma client:
+	- `python3 -m prisma generate --schema prisma/schema.prisma`
+4. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN`.
+5. Run tests:
 	- `pytest`
 
 ## Deployment Note
