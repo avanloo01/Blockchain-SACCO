@@ -56,7 +56,7 @@ def generate_repayment_schedule(loan: LoanRequestRow) -> list[RepaymentSchedule]
 
 
 def get_due_repayments(days_ahead: int = 3) -> list[dict[str, str]]:
-    """Return repayments due within the next N days."""
+    """Return repayments due within the next N days for linked Telegram members."""
     db = get_db()
     now = datetime.now(timezone.utc)
     cutoff = now + timedelta(days=days_ahead)
@@ -69,12 +69,13 @@ def get_due_repayments(days_ahead: int = 3) -> list[dict[str, str]]:
     )
     return [
         {
-            "member_id": r.member.telegramChatId if r.member else r.memberId,
+            "member_id": r.member.telegramChatId,
             "due_on": r.dueOn.strftime("%Y-%m-%d"),
             "amount_usd": str(r.amountUsd),
             "repayment_id": r.id,
         }
         for r in rows
+        if r.member and r.member.telegramChatId
     ]
 
 

@@ -107,7 +107,7 @@ def get_active_member_ids() -> list[str]:
     """Return Telegram chat IDs for all members."""
     db = get_db()
     members = db.member.find_many()
-    return [m.telegramChatId for m in members]
+    return [m.telegramChatId for m in members if m.telegramChatId]
 
 
 def get_member_months(member: Member) -> int:
@@ -123,5 +123,14 @@ def add_contribution(telegram_chat_id: str, amount_usd: float) -> Member:
     db = get_db()
     return db.member.update(
         where={"telegramChatId": telegram_chat_id},
+        data={"contributionTotalUsd": {"increment": amount_usd}},
+    )
+
+
+def add_contribution_by_member_id(member_id: str, amount_usd: float) -> Member:
+    """Increment a member's contribution total by primary key."""
+    db = get_db()
+    return db.member.update(
+        where={"id": member_id},
         data={"contributionTotalUsd": {"increment": amount_usd}},
     )

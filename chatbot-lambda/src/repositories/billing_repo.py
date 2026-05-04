@@ -75,6 +75,7 @@ def get_pending_billing_intents() -> list[BillingIntent]:
     return db.billingintent.find_many(
         where={"status": "pending"},
         order={"createdAt": "asc"},
+        include={"member": True},
     )
 
 

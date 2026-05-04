@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomBytes, createHash } from "crypto";
+import { randomBytes, createHash, randomUUID } from "crypto";
 import { supabaseInsert } from "@/lib/supabase";
 import { isRateLimited, getClientIp } from "@/lib/rate-limit";
 import { sendVerificationEmail } from "@/lib/email";
@@ -49,12 +49,16 @@ export async function POST(req: NextRequest) {
   }
 
   const { raw: token, hashed } = generateVerificationToken();
+  const memberId = randomUUID();
+  const updatedAt = new Date().toISOString();
 
   const baseMember = {
+    id: memberId,
     email,
     phone,
     wallet_address: walletAddress || null,
     display_name: email.split("@")[0],
+    updated_at: updatedAt,
   };
 
   let verificationEnabled = true;

@@ -11,7 +11,7 @@ datasource db {
 }
 
 model Member {
-  id                   String   @id @default(uuid())
+  id                   String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   telegramChatId       String?  @unique @map("telegram_chat_id")
   email                String?  @unique
   phone                String?
@@ -24,7 +24,7 @@ model Member {
   contributionTotalUsd Float    @default(0) @map("contribution_total_usd")
   repaymentOnTimeRatio Float    @default(1.0) @map("repayment_on_time_ratio")
   createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
 
   billingIntents     BillingIntent[]
   loanRequests       LoanRequest[]

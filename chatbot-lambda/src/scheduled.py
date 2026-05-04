@@ -2,7 +2,6 @@ import logging
 from typing import Any
 
 from src.repositories.billing_repo import get_pending_billing_intents, mark_billing_settled
-from src.repositories.member_repo import get_member_by_chat_id
 from src.repositories.message_repo import record_delivery
 from src.services.campaigns import build_monthly_contribution_messages, build_repayment_messages
 from src.services.telegram_api import TelegramApiError, send_message
@@ -69,7 +68,7 @@ def payment_reconciliation_handler(_event: dict[str, Any], _context: Any) -> dic
     but the transaction was still pending at verification time, as well as
     any intents that may have been missed.
     """
-    from src.repositories.member_repo import add_contribution
+    from src.repositories.member_repo import add_contribution_by_member_id
     from src.services.payments import get_payment_provider
     from src.services.payments.base import PaymentStatus
 
@@ -93,12 +92,13 @@ def payment_reconciliation_handler(_event: dict[str, Any], _context: Any) -> dic
 
         if result.status == PaymentStatus.CONFIRMED:
             mark_billing_settled(intent_id=intent.id, tx_signature=intent.txSignature)
-            member = get_member_by_chat_id(intent.member.telegramChatId) if intent.member else None
+            member = intent.member if intent.member else None
             if member:
-                add_contribution(
-                    telegram_chat_id=member.telegramChatId,
+                add_contribution_by_member_id(
+                    member_id=member.id,
                     amount_usd=intent.netPoolAmountUsd,
                 )
+            if member and member.telegramChatId:
                 try:
                     send_message(
                         chat_id=member.telegramChatId,
