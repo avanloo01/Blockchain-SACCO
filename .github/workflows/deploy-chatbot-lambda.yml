@@ -14,6 +14,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      PRISMA_LAMBDA_BINARY_TARGET: rhel-openssl-3.0.x
 
     steps:
       - name: Checkout
@@ -43,7 +45,33 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL || secrets.DATABASE_URL }}
-        run: python -m prisma generate --schema prisma/schema.prisma
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if python -m prisma generate --schema prisma/schema.prisma; then
+              exit 0
+            fi
+
+            if [[ "$attempt" == "3" ]]; then
+              echo "Prisma client generation failed after ${attempt} attempts" >&2
+              exit 1
+            fi
+
+            echo "Prisma client generation failed on attempt ${attempt}, retrying..." >&2
+          done
+
+      - name: Bundle Prisma query engine
+        working-directory: chatbot-lambda
+        run: |
+          set -euo pipefail
+          engine_path="$(find "$HOME/.cache/prisma-python/binaries" -type f \( -name "query-engine-${PRISMA_LAMBDA_BINARY_TARGET}" -o -name "prisma-query-engine-${PRISMA_LAMBDA_BINARY_TARGET}" \) | head -n 1)"
+          if [[ -z "$engine_path" ]]; then
+            echo "Could not find Prisma query engine for ${PRISMA_LAMBDA_BINARY_TARGET} in cache" >&2
+            exit 1
+          fi
+
+          cp "$engine_path" "./prisma-query-engine-${PRISMA_LAMBDA_BINARY_TARGET}"
+          chmod +x "./prisma-query-engine-${PRISMA_LAMBDA_BINARY_TARGET}"
 
       - name: Build
         working-directory: chatbot-lambda

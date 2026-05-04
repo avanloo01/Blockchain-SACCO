@@ -57,6 +57,7 @@ Globals:
         PAYMENT_PROVIDER: !Ref PaymentProvider
         SOLANA_TREASURY_ADDRESS: !Ref SolanaTreasuryAddress
         SOLANA_RPC_URL: !Ref SolanaRpcUrl
+        PRISMA_QUERY_ENGINE_BINARY: /var/task/prisma-query-engine-rhel-openssl-3.0.x
         MOONPAY_API_KEY: !Ref MoonpayApiKey
         MOONPAY_SECRET_KEY: !Ref MoonpaySecretKey
         MOONPAY_WALLET_ADDRESS: !Ref SolanaTreasuryAddress
