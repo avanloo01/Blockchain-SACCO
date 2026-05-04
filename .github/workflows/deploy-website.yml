@@ -50,7 +50,11 @@ jobs:
               exit 1
             fi
 
-            printf '%s' "$value" | vercel env add "$name" production --force --token="$VERCEL_TOKEN"
+            if vercel env ls production --token="$VERCEL_TOKEN" | grep -Eq "^[[:space:]]+$name[[:space:]]"; then
+              vercel env update "$name" production --yes --value "$value" --token="$VERCEL_TOKEN"
+            else
+              printf '%s' "$value" | vercel env add "$name" production --token="$VERCEL_TOKEN"
+            fi
           }
 
           sync_env RESEND_API_KEY "$RESEND_API_KEY"

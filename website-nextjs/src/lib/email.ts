@@ -1,7 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const FROM_ADDRESS =
   process.env.RESEND_FROM_EMAIL || "Blockchain SACCO <noreply@lemaiyanlabs.org>";
 
@@ -9,6 +7,13 @@ export async function sendVerificationEmail(
   to: string,
   verifyUrl: string,
 ): Promise<{ success: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    return { success: false, error: "RESEND_API_KEY is not configured" };
+  }
+
+  const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({
     from: FROM_ADDRESS,
     to,
