@@ -5,7 +5,7 @@ export function Nav() {
   return (
     <nav className={styles.nav}>
       <Link href="/" className={styles.logo}>
-        Blockchain<span className={styles.logoAccent}>SACCO</span>
+        Blockchain<span className={styles.logoAccent}> SACCO</span>
       </Link>
       <ul className={styles.links}>
         <li>
