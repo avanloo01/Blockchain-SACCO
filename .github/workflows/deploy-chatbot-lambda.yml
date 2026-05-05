@@ -95,4 +95,5 @@ jobs:
               SolanaTreasuryAddress="${{ secrets.SOLANA_TREASURY_ADDRESS }}" \
               CrossmintWalletAddress="${{ secrets.SOLANA_TREASURY_ADDRESS }}" \
               SolanaRpcUrl="${{ secrets.SOLANA_RPC_URL }}" \
-              CrossmintServerApiKey="${{ secrets.CROSSMINT_SERVER_API_KEY }}"
+              CrossmintServerApiKey="${{ secrets.CROSSMINT_SERVER_API_KEY }}" \
+              WebsiteUrl="${{ secrets.NEXTAUTH_URL }}"

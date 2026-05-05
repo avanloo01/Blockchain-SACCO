@@ -37,6 +37,10 @@ Parameters:
     Default: ""
     NoEcho: true
     Description: Crossmint server-side API key for headless checkout and order reads
+  WebsiteUrl:
+    Type: String
+    Default: "https://lemaiyanlabs.org"
+    Description: Public URL of the Next.js website (used to build checkout links)
 
 Globals:
   Function:
@@ -59,6 +63,7 @@ Globals:
         PRISMA_QUERY_ENGINE_BINARY: /var/task/prisma-query-engine-rhel-openssl-3.0.x
         CROSSMINT_SERVER_API_KEY: !Ref CrossmintServerApiKey
         CROSSMINT_WALLET_ADDRESS: !Ref CrossmintWalletAddress
+        WEBSITE_URL: !Ref WebsiteUrl
 
 Resources:
   TelegramWebhookFunction:
