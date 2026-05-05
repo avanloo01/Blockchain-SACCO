@@ -93,5 +93,6 @@ jobs:
               DatabaseUrl="${{ secrets.DATABASE_URL }}" \
               PaymentProvider="crossmint" \
               SolanaTreasuryAddress="${{ secrets.SOLANA_TREASURY_ADDRESS }}" \
+              CrossmintRecipientEmail="${{ secrets.CROSSMINT_RECIPIENT_EMAIL }}" \
               SolanaRpcUrl="${{ secrets.SOLANA_RPC_URL }}" \
               CrossmintServerApiKey="${{ secrets.CROSSMINT_SERVER_API_KEY }}"

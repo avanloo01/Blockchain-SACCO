@@ -111,7 +111,7 @@ function CrossmintCheckoutContent() {
 
   if (!apiKey) {
     return (
-      <InvalidLink reason="The website is missing NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY." />
+      <InvalidLink reason="The website is missing the API key." />
     );
   }
 
@@ -126,7 +126,7 @@ function CrossmintCheckoutContent() {
           <p className={styles.eyebrow}>Crossmint Checkout</p>
           <h1>Complete your SACCO contribution</h1>
           <p className={styles.lead}>
-            This secure checkout sends the purchased USDC to the SACCO treasury wallet.
+            This secure checkout sends the purchased USDC to the SACCO Crossmint treasury wallet.
           </p>
         </div>
         <div className={styles.heroMeta}>
@@ -211,7 +211,7 @@ function CrossmintCheckoutContent() {
           <section className={styles.infoCard}>
             <span className={styles.label}>Notes</span>
             <p className={styles.supportText}>
-              Receipt email is collected by Crossmint during checkout if it is required for the payment method.
+              Members can keep using their own wallets elsewhere in the SACCO flow. This checkout settles into the SACCO treasury wallet, and Crossmint may still collect a receipt email for the payment method.
             </p>
           </section>
         </aside>

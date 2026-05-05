@@ -96,6 +96,7 @@ class CrossmintProvider(PaymentProvider):
         amount_usd: float,
         member_id: str,
         idempotency_key: str | None = None,
+        receipt_email: str | None = None,
     ) -> PaymentIntent:
         del idempotency_key
 
@@ -103,30 +104,40 @@ class CrossmintProvider(PaymentProvider):
         if not api_key:
             raise ValueError("CROSSMINT_SERVER_API_KEY is not configured")
 
-        treasury = settings.crossmint_wallet_address
-        if not treasury:
-            raise ValueError("CROSSMINT_WALLET_ADDRESS is not configured")
+        recipient_email = settings.crossmint_recipient_email
+        if not recipient_email:
+            raise ValueError("CROSSMINT_RECIPIENT_EMAIL is not configured")
 
         token_locator = settings.crossmint_token_locator
         if not token_locator:
             raise ValueError("CROSSMINT_TOKEN_LOCATOR is not configured")
 
+        if not isinstance(receipt_email, str) or not receipt_email.strip():
+            raise ValueError(
+                "Your SACCO account is missing an email address. Complete signup on the website before contributing."
+            )
+
+        receipt_email = receipt_email.strip()
+
         fee_usd = round(amount_usd * settings.service_fee_percent / 100.0, 2)
         net_pool = round(amount_usd - fee_usd, 2)
         payload = {
-            "recipient": {"walletAddress": treasury},
+            "recipient": {"email": recipient_email},
             "payment": {
                 "method": "card",
                 "currency": "usd",
+                "receiptEmail": receipt_email,
             },
-            "lineItems": {
-                "tokenLocator": token_locator,
-                "executionParameters": {
-                    "mode": "exact-in",
-                    "amount": _format_usd(amount_usd),
-                    "maxSlippageBps": settings.crossmint_slippage_bps,
-                },
-            },
+            "lineItems": [
+                {
+                    "tokenLocator": token_locator,
+                    "executionParameters": {
+                        "mode": "exact-in",
+                        "amount": _format_usd(amount_usd),
+                        "maxSlippageBps": settings.crossmint_slippage_bps,
+                    },
+                }
+            ],
             "locale": "en-US",
         }
 
@@ -178,7 +189,7 @@ class CrossmintProvider(PaymentProvider):
             asset="USDC",
             network=token_locator.split(":", 1)[0],
             status=PaymentStatus.PENDING,
-            recipient_address=treasury,
+            recipient_address=recipient_email,
             memo=None,
             payment_url=payment_url,
         )

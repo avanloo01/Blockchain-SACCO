@@ -32,7 +32,9 @@ class SolanaTestnetProvider(PaymentProvider):
         amount_usd: float,
         member_id: str,
         idempotency_key: str | None = None,
+        receipt_email: str | None = None,
     ) -> PaymentIntent:
+        del receipt_email
         fee_usd = round(amount_usd * settings.service_fee_percent / 100.0, 2)
         net_pool = round(amount_usd - fee_usd, 2)
         intent_id = idempotency_key or str(uuid.uuid4())

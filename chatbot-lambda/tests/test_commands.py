@@ -8,6 +8,7 @@ def _fake_member(**overrides):
     defaults = {
         "id": "mem-001",
         "telegramChatId": "123",
+        "email": "member@example.com",
         "displayName": None,
         "joinedOn": datetime(2025, 12, 1, tzinfo=timezone.utc),
         "emailVerified": False,
@@ -71,6 +72,11 @@ def test_contribute_with_amount_includes_fee_breakdown(mock_member, mock_provide
     assert "Net to pool:" in message
     assert "TreasuryABC" in message
     assert "/verify" in message
+    mock_provider.return_value.create_payment_intent.assert_called_once_with(
+        amount_usd=25.0,
+        member_id="mem-001",
+        receipt_email="member@example.com",
+    )
 
 
 @patch("src.handlers.commands.generate_repayment_schedule")

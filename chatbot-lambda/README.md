@@ -28,7 +28,9 @@ Python AWS Lambda service for Telegram SACCO operations.
 	- `pip install -r requirements.txt`
 3. Generate the Prisma client:
 	- `python3 -m prisma generate --schema prisma/schema.prisma`
-4. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN`, `CROSSMINT_SERVER_API_KEY`, and `SOLANA_TREASURY_ADDRESS`.
+4. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN`, `CROSSMINT_SERVER_API_KEY`, and the treasury wallet settings.
+	- Set `CROSSMINT_RECIPIENT_EMAIL` to the SACCO treasury email address (e.g. `arthurvl@duck.com`) for Crossmint checkout.
+	- Keep `SOLANA_TREASURY_ADDRESS` for direct Solana transfer flows.
 5. Run tests:
 	- `pytest`
 

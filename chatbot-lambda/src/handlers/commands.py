@@ -87,9 +87,17 @@ def dispatch_command(chat_id: str, text: str) -> str:
         if amount_usd <= 0:
             return "Invalid amount. Example: /contribute 25"
 
+        receipt_email = getattr(member, "email", None)
+        if not isinstance(receipt_email, str):
+            receipt_email = None
+
         try:
             provider = get_payment_provider()
-            intent = provider.create_payment_intent(amount_usd=amount_usd, member_id=chat_id)
+            intent = provider.create_payment_intent(
+                amount_usd=amount_usd,
+                member_id=member.id,
+                receipt_email=receipt_email,
+            )
         except Exception as exc:
             logger.exception("Failed to create payment intent for chat_id=%s", chat_id)
             return f"Could not start the payment right now: {exc}"

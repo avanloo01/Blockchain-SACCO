@@ -54,6 +54,7 @@ class PaymentProvider(ABC):
         amount_usd: float,
         member_id: str,
         idempotency_key: str | None = None,
+        receipt_email: str | None = None,
     ) -> PaymentIntent:
         """Build a payment intent with transfer instructions for the member."""
 
