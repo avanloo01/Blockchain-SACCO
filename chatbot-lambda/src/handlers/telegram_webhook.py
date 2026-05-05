@@ -46,7 +46,14 @@ def handle_telegram_update(update: dict[str, Any]) -> dict[str, Any]:
         return {"ok": True, "ignored": True, "update_id": update_id}
 
     logger.info("Dispatching command for chat_id=%s text=%s", chat_id_str, text[:60])
-    response_text = dispatch_command(chat_id=chat_id_str, text=text)
+    try:
+        response_text = dispatch_command(chat_id=chat_id_str, text=text)
+    except Exception:
+        logger.exception("Command handling failed for chat_id=%s text=%s", chat_id_str, text[:60])
+        response_text = (
+            "Something went wrong while processing that command. "
+            "Please try again in a moment."
+        )
 
     reply_markup = None
     if get_member_by_chat_id(telegram_chat_id=chat_id_str) is None:

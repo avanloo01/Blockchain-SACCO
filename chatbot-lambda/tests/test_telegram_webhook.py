@@ -51,3 +51,24 @@ def test_contact_message_links_member(mock_link, mock_member, mock_send) -> None
     kwargs = mock_send.call_args.kwargs
     assert kwargs["reply_markup"] == {"remove_keyboard": True}
     assert "now linked" in kwargs["text"]
+
+
+@patch("src.handlers.telegram_webhook.send_message")
+@patch("src.handlers.telegram_webhook.get_member_by_chat_id", return_value=None)
+@patch("src.handlers.telegram_webhook.dispatch_command", side_effect=RuntimeError("boom"))
+def test_command_error_still_sends_reply(_mock_dispatch, _mock_member, mock_send) -> None:
+    mock_send.return_value = {"ok": True, "result": {"message_id": 7}}
+
+    result = handle_telegram_update(
+        {
+            "update_id": 3,
+            "message": {
+                "chat": {"id": 123},
+                "text": "/contribute 25",
+            },
+        }
+    )
+
+    assert result["ok"] is True
+    kwargs = mock_send.call_args.kwargs
+    assert "Something went wrong while processing that command" in kwargs["text"]

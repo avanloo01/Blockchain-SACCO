@@ -210,3 +210,15 @@ def test_crossmint_contribute_shows_single_arg_verify(
 
     assert "/verify order-123" in message
     assert "<tx_signature>" not in message
+
+
+@patch("src.handlers.commands.get_payment_provider")
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_contribute_returns_provider_error_message(mock_member, mock_provider) -> None:
+    mock_member.return_value = _fake_member()
+    mock_provider.side_effect = ValueError("Unknown payment provider 'moonpay'")
+
+    message = dispatch_command(chat_id="123", text="/contribute 25")
+
+    assert "Could not start the payment right now" in message
+    assert "moonpay" in message

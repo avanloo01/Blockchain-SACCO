@@ -91,7 +91,7 @@ jobs:
               TelegramBotToken="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
               TelegramWebhookSecret="${{ secrets.TELEGRAM_WEBHOOK_SECRET }}" \
               DatabaseUrl="${{ secrets.DATABASE_URL }}" \
-              PaymentProvider="${{ secrets.PAYMENT_PROVIDER }}" \
+              PaymentProvider="crossmint" \
               SolanaTreasuryAddress="${{ secrets.SOLANA_TREASURY_ADDRESS }}" \
               SolanaRpcUrl="${{ secrets.SOLANA_RPC_URL }}" \
               CrossmintServerApiKey="${{ secrets.CROSSMINT_SERVER_API_KEY }}"
