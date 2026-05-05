@@ -144,7 +144,7 @@ def test_verify_without_rpc_url(mock_settings):
 def test_crossmint_create_payment_intent(mock_settings, mock_post):
     mock_settings.service_fee_percent = 1.0
     mock_settings.crossmint_server_api_key = "server_key_123"
-    mock_settings.crossmint_recipient_email = "arthurvl@duck.com"
+    mock_settings.crossmint_wallet_address = "TreasuryWallet123"
     mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     mock_settings.crossmint_slippage_bps = "500"
     mock_settings.website_url = "https://blockchainsacco.com"
@@ -173,12 +173,12 @@ def test_crossmint_create_payment_intent(mock_settings, mock_post):
     assert intent.asset == "USDC"
     assert intent.network == "solana"
     assert intent.status == PaymentStatus.PENDING
-    assert intent.recipient_address == "arthurvl@duck.com"
+    assert intent.recipient_address == "TreasuryWallet123"
     assert "/checkout/crossmint" in intent.payment_url
     assert "orderId=order-123" in intent.payment_url
     assert "clientSecret=client_secret_123" in intent.payment_url
     payload = mock_post.call_args.kwargs["json"]
-    assert payload["recipient"]["email"] == "arthurvl@duck.com"
+    assert payload["recipient"]["walletAddress"] == "TreasuryWallet123"
     assert payload["payment"]["receiptEmail"] == "member@example.com"
     assert isinstance(payload["lineItems"], list)
     assert payload["lineItems"][0]["tokenLocator"] == mock_settings.crossmint_token_locator
@@ -187,7 +187,7 @@ def test_crossmint_create_payment_intent(mock_settings, mock_post):
 @patch("src.services.payments.crossmint.settings")
 def test_crossmint_create_intent_raises_without_server_key(mock_settings):
     mock_settings.crossmint_server_api_key = ""
-    mock_settings.crossmint_recipient_email = "arthurvl@duck.com"
+    mock_settings.crossmint_wallet_address = "TreasuryWallet123"
     mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     mock_settings.service_fee_percent = 1.0
 
@@ -206,7 +206,7 @@ def test_crossmint_create_intent_raises_without_server_key(mock_settings):
 @patch("src.services.payments.crossmint.settings")
 def test_crossmint_create_intent_raises_without_recipient_email_config(mock_settings):
     mock_settings.crossmint_server_api_key = "server_key_123"
-    mock_settings.crossmint_recipient_email = ""
+    mock_settings.crossmint_wallet_address = ""
     mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     mock_settings.service_fee_percent = 1.0
 
@@ -219,13 +219,13 @@ def test_crossmint_create_intent_raises_without_recipient_email_config(mock_sett
         )
         assert False, "Should have raised ValueError"
     except ValueError as exc:
-        assert "CROSSMINT_RECIPIENT_EMAIL" in str(exc)
+        assert "CROSSMINT_WALLET_ADDRESS" in str(exc)
 
 
 @patch("src.services.payments.crossmint.settings")
 def test_crossmint_create_intent_raises_without_receipt_email(mock_settings):
     mock_settings.crossmint_server_api_key = "server_key_123"
-    mock_settings.crossmint_recipient_email = "arthurvl@duck.com"
+    mock_settings.crossmint_wallet_address = "TreasuryWallet123"
     mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     mock_settings.service_fee_percent = 1.0
 

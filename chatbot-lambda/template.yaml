@@ -24,10 +24,10 @@ Parameters:
     Type: String
     Default: ""
     Description: Solana wallet address for receiving USDC contributions
-  CrossmintRecipientEmail:
+  CrossmintWalletAddress:
     Type: String
     Default: ""
-    Description: Email address for the SACCO treasury recipient in Crossmint checkout
+    Description: Solana wallet address for the SACCO treasury recipient in Crossmint checkout
   SolanaRpcUrl:
     Type: String
     Default: "https://api.devnet.solana.com"
@@ -58,7 +58,7 @@ Globals:
         SOLANA_RPC_URL: !Ref SolanaRpcUrl
         PRISMA_QUERY_ENGINE_BINARY: /var/task/prisma-query-engine-rhel-openssl-3.0.x
         CROSSMINT_SERVER_API_KEY: !Ref CrossmintServerApiKey
-        CROSSMINT_RECIPIENT_EMAIL: !Ref CrossmintRecipientEmail
+        CROSSMINT_WALLET_ADDRESS: !Ref CrossmintWalletAddress
 
 Resources:
   TelegramWebhookFunction:

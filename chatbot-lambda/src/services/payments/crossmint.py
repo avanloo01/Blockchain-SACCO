@@ -104,9 +104,9 @@ class CrossmintProvider(PaymentProvider):
         if not api_key:
             raise ValueError("CROSSMINT_SERVER_API_KEY is not configured")
 
-        recipient_email = settings.crossmint_recipient_email
-        if not recipient_email:
-            raise ValueError("CROSSMINT_RECIPIENT_EMAIL is not configured")
+        treasury = settings.crossmint_wallet_address
+        if not treasury:
+            raise ValueError("CROSSMINT_WALLET_ADDRESS is not configured")
 
         token_locator = settings.crossmint_token_locator
         if not token_locator:
@@ -122,7 +122,7 @@ class CrossmintProvider(PaymentProvider):
         fee_usd = round(amount_usd * settings.service_fee_percent / 100.0, 2)
         net_pool = round(amount_usd - fee_usd, 2)
         payload = {
-            "recipient": {"email": recipient_email},
+            "recipient": {"walletAddress": treasury},
             "payment": {
                 "method": "card",
                 "currency": "usd",
@@ -189,7 +189,7 @@ class CrossmintProvider(PaymentProvider):
             asset="USDC",
             network=token_locator.split(":", 1)[0],
             status=PaymentStatus.PENDING,
-            recipient_address=recipient_email,
+            recipient_address=treasury,
             memo=None,
             payment_url=payment_url,
         )
