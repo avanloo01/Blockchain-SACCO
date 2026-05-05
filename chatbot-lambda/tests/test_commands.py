@@ -140,3 +140,73 @@ def test_vote_command_rejects_invalid_choice(mock_member) -> None:
     mock_member.return_value = _fake_member(id="mem-001")
     message = dispatch_command(chat_id="123", text="/vote loan-1 maybe")
     assert "Invalid vote" in message
+
+
+@patch("src.handlers.commands.settings")
+@patch("src.handlers.commands.add_contribution")
+@patch("src.handlers.commands.mark_billing_settled")
+@patch("src.handlers.commands.get_billing_intent_by_idempotency_key")
+@patch("src.handlers.commands.get_payment_provider")
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_crossmint_verify_accepts_intent_only(
+    mock_member,
+    mock_provider,
+    mock_billing,
+    _mock_mark,
+    _mock_add_contribution,
+    mock_settings,
+) -> None:
+    from src.services.payments.base import PaymentStatus, SettlementResult
+
+    mock_settings.payment_provider = "crossmint"
+    mock_member.return_value = _fake_member(id="mem-001")
+    mock_billing.return_value = MagicMock(
+        id="bill-1",
+        memberId="mem-001",
+        status="pending",
+        netPoolAmountUsd=24.75,
+    )
+    mock_provider.return_value.verify_payment_settlement.return_value = SettlementResult(
+        intent_id="order-123",
+        status=PaymentStatus.CONFIRMED,
+        tx_signature="tx-123",
+    )
+
+    message = dispatch_command(chat_id="123", text="/verify order-123")
+
+    assert "Payment confirmed!" in message
+    assert "24.75 USDC" in message
+
+
+@patch("src.handlers.commands.settings")
+@patch("src.handlers.commands.create_billing_intent")
+@patch("src.handlers.commands.get_payment_provider")
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_crossmint_contribute_shows_single_arg_verify(
+    mock_member,
+    mock_provider,
+    _mock_billing,
+    mock_settings,
+) -> None:
+    from src.services.payments.base import PaymentIntent, PaymentStatus
+
+    mock_settings.payment_provider = "crossmint"
+    mock_member.return_value = _fake_member()
+    mock_provider.return_value.create_payment_intent.return_value = PaymentIntent(
+        intent_id="order-123",
+        member_id="123",
+        amount_usd=25.0,
+        service_fee_usd=0.25,
+        net_pool_amount_usd=24.75,
+        asset="USDC",
+        network="solana",
+        status=PaymentStatus.PENDING,
+        recipient_address="TreasuryABC",
+        memo=None,
+        payment_url="https://blockchainsacco.com/checkout/crossmint?orderId=order-123",
+    )
+
+    message = dispatch_command(chat_id="123", text="/contribute 25")
+
+    assert "/verify order-123" in message
+    assert "<tx_signature>" not in message

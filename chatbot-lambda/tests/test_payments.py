@@ -4,7 +4,7 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 from src.services.payments.base import PaymentIntent, PaymentStatus, SettlementResult
-from src.services.payments.moonpay import MoonpayProvider
+from src.services.payments.crossmint import CrossmintProvider
 from src.services.payments.solana_testnet import SolanaTestnetProvider
 
 
@@ -136,115 +136,117 @@ def test_verify_without_rpc_url(mock_settings):
     assert "SOLANA_RPC_URL" in result.error
 
 
-# ── MoonPay provider tests ──────────────────────────────────────────
+# ── Crossmint provider tests ────────────────────────────────────────
 
 
-@patch("src.services.payments.moonpay.settings")
-def test_moonpay_create_payment_intent(mock_settings):
+@patch("src.services.payments.crossmint.requests.post")
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_create_payment_intent(mock_settings, mock_post):
     mock_settings.service_fee_percent = 1.0
-    mock_settings.app_env = "prod"
-    mock_settings.moonpay_api_key = "pk_test_123"
-    mock_settings.moonpay_wallet_address = "TreasuryWallet123"
-    mock_settings.moonpay_currency_code = "usdc_sol"
-    mock_settings.moonpay_network = "solana"
+    mock_settings.crossmint_server_api_key = "server_key_123"
+    mock_settings.crossmint_wallet_address = "TreasuryWallet123"
+    mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    mock_settings.crossmint_slippage_bps = "500"
+    mock_settings.website_url = "https://blockchainsacco.com"
+    mock_settings.app_env = "dev"
 
-    provider = MoonpayProvider()
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = {
+        "clientSecret": "client_secret_123",
+        "order": {"orderId": "order-123"},
+    }
+    mock_post.return_value = mock_resp
+
+    provider = CrossmintProvider()
     intent = provider.create_payment_intent(amount_usd=25.0, member_id="chat-42")
 
     assert isinstance(intent, PaymentIntent)
+    assert intent.intent_id == "order-123"
     assert intent.amount_usd == 25.0
     assert intent.service_fee_usd == 0.25
     assert intent.net_pool_amount_usd == 24.75
-    assert intent.asset == "USDC_SOL"
+    assert intent.asset == "USDC"
     assert intent.network == "solana"
     assert intent.status == PaymentStatus.PENDING
     assert intent.recipient_address == "TreasuryWallet123"
-    assert "buy.moonpay.com" in intent.payment_url
-    assert "apiKey=pk_test_123" in intent.payment_url
-    assert "baseCurrencyAmount=25.0" in intent.payment_url
+    assert "/checkout/crossmint" in intent.payment_url
+    assert "orderId=order-123" in intent.payment_url
+    assert "clientSecret=client_secret_123" in intent.payment_url
 
 
-@patch("src.services.payments.moonpay.settings")
-def test_moonpay_create_intent_uses_idempotency_key(mock_settings):
-    mock_settings.service_fee_percent = 1.0
-    mock_settings.app_env = "prod"
-    mock_settings.moonpay_api_key = "pk_test_123"
-    mock_settings.moonpay_wallet_address = "TreasuryWallet123"
-    mock_settings.moonpay_currency_code = "usdc_sol"
-    mock_settings.moonpay_network = "solana"
-
-    provider = MoonpayProvider()
-    key = "my-idem-key"
-    intent = provider.create_payment_intent(
-        amount_usd=10.0, member_id="chat-1", idempotency_key=key
-    )
-    assert intent.intent_id == key
-    assert f"externalTransactionId={key}" in intent.payment_url
-
-
-@patch("src.services.payments.moonpay.settings")
-def test_moonpay_create_intent_raises_without_api_key(mock_settings):
-    mock_settings.moonpay_api_key = ""
-    mock_settings.moonpay_wallet_address = "TreasuryWallet123"
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_create_intent_raises_without_server_key(mock_settings):
+    mock_settings.crossmint_server_api_key = ""
+    mock_settings.crossmint_wallet_address = "TreasuryWallet123"
+    mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     mock_settings.service_fee_percent = 1.0
 
-    provider = MoonpayProvider()
+    provider = CrossmintProvider()
     try:
         provider.create_payment_intent(amount_usd=10.0, member_id="chat-1")
         assert False, "Should have raised ValueError"
     except ValueError as exc:
-        assert "MOONPAY_API_KEY" in str(exc)
+        assert "CROSSMINT_SERVER_API_KEY" in str(exc)
 
 
-@patch("src.services.payments.moonpay.settings")
-def test_moonpay_create_intent_raises_without_wallet(mock_settings):
-    mock_settings.moonpay_api_key = "pk_test_123"
-    mock_settings.moonpay_wallet_address = ""
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_create_intent_raises_without_wallet(mock_settings):
+    mock_settings.crossmint_server_api_key = "server_key_123"
+    mock_settings.crossmint_wallet_address = ""
+    mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     mock_settings.service_fee_percent = 1.0
 
-    provider = MoonpayProvider()
+    provider = CrossmintProvider()
     try:
         provider.create_payment_intent(amount_usd=10.0, member_id="chat-1")
         assert False, "Should have raised ValueError"
     except ValueError as exc:
-        assert "MOONPAY_WALLET_ADDRESS" in str(exc)
+        assert "CROSSMINT_WALLET_ADDRESS" in str(exc)
 
 
-@patch("src.services.payments.moonpay.requests.get")
-@patch("src.services.payments.moonpay.settings")
-def test_moonpay_verify_completed_order(mock_settings, mock_get):
-    mock_settings.moonpay_secret_key = "sk_test_123"
+@patch("src.services.payments.crossmint.requests.get")
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_verify_completed_order(mock_settings, mock_get):
+    mock_settings.crossmint_server_api_key = "server_key_123"
+    mock_settings.app_env = "dev"
 
     mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = [
-        {"status": "completed", "id": "order-123", "quoteCurrencyAmount": 25.0},
-    ]
+    mock_resp.raise_for_status.return_value = None
+    mock_resp.json.return_value = {
+        "orderId": "order-123",
+        "phase": "completed",
+        "payment": {"status": "completed"},
+        "lineItems": [{"delivery": {"status": "completed", "txId": "tx-123"}}],
+    }
     mock_get.return_value = mock_resp
 
-    provider = MoonpayProvider()
+    provider = CrossmintProvider()
     result = provider.verify_payment_settlement(
         intent_id="intent-1", tx_signature="order-123"
     )
 
     assert result.status == PaymentStatus.CONFIRMED
-    assert result.tx_signature == "order-123"
-    assert result.settled_amount == 25.0
+    assert result.tx_signature == "tx-123"
 
 
-@patch("src.services.payments.moonpay.requests.get")
-@patch("src.services.payments.moonpay.settings")
-def test_moonpay_verify_pending_order(mock_settings, mock_get):
-    mock_settings.moonpay_secret_key = "sk_test_123"
+@patch("src.services.payments.crossmint.requests.get")
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_verify_pending_order(mock_settings, mock_get):
+    mock_settings.crossmint_server_api_key = "server_key_123"
+    mock_settings.app_env = "dev"
 
     mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = [
-        {"status": "pending", "id": "order-456"},
-    ]
+    mock_resp.raise_for_status.return_value = None
+    mock_resp.json.return_value = {
+        "orderId": "order-456",
+        "phase": "payment",
+        "payment": {"status": "awaiting-payment"},
+        "lineItems": [{"delivery": {"status": "awaiting-payment"}}],
+    }
     mock_get.return_value = mock_resp
 
-    provider = MoonpayProvider()
+    provider = CrossmintProvider()
     result = provider.verify_payment_settlement(
         intent_id="intent-1", tx_signature="order-456"
     )
@@ -252,50 +254,39 @@ def test_moonpay_verify_pending_order(mock_settings, mock_get):
     assert result.status == PaymentStatus.PENDING
 
 
-@patch("src.services.payments.moonpay.requests.get")
-@patch("src.services.payments.moonpay.settings")
-def test_moonpay_verify_failed_order(mock_settings, mock_get):
-    mock_settings.moonpay_secret_key = "sk_test_123"
+@patch("src.services.payments.crossmint.requests.get")
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_verify_failed_order(mock_settings, mock_get):
+    mock_settings.crossmint_server_api_key = "server_key_123"
+    mock_settings.app_env = "dev"
 
     mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = [
-        {"status": "failed", "id": "order-789", "failureReason": "Cancelled by customer"},
-    ]
+    mock_resp.raise_for_status.return_value = None
+    mock_resp.json.return_value = {
+        "orderId": "order-789",
+        "phase": "payment",
+        "payment": {"status": "failed-kyc"},
+        "lineItems": [{"delivery": {"status": "awaiting-payment"}}],
+    }
     mock_get.return_value = mock_resp
 
-    provider = MoonpayProvider()
+    provider = CrossmintProvider()
     result = provider.verify_payment_settlement(
         intent_id="intent-1", tx_signature="order-789"
     )
 
     assert result.status == PaymentStatus.FAILED
-    assert "failed" in result.error
+    assert "failed-kyc" in result.error
 
 
-@patch("src.services.payments.moonpay.settings")
-def test_moonpay_verify_without_secret_key(mock_settings):
-    mock_settings.moonpay_secret_key = ""
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_verify_without_server_key(mock_settings):
+    mock_settings.crossmint_server_api_key = ""
 
-    provider = MoonpayProvider()
+    provider = CrossmintProvider()
     result = provider.verify_payment_settlement(
         intent_id="intent-1", tx_signature="order-000"
     )
 
     assert result.status == PaymentStatus.FAILED
-    assert "MOONPAY_SECRET_KEY" in result.error
-
-
-@patch("src.services.payments.moonpay.settings")
-def test_moonpay_sandbox_url_in_dev(mock_settings):
-    mock_settings.service_fee_percent = 1.0
-    mock_settings.app_env = "dev"
-    mock_settings.moonpay_api_key = "pk_test_123"
-    mock_settings.moonpay_wallet_address = "TreasuryWallet123"
-    mock_settings.moonpay_currency_code = "usdc_sol"
-    mock_settings.moonpay_network = "solana"
-
-    provider = MoonpayProvider()
-    intent = provider.create_payment_intent(amount_usd=10.0, member_id="chat-1")
-
-    assert "buy-sandbox.moonpay.com" in intent.payment_url
+    assert "CROSSMINT_SERVER_API_KEY" in result.error

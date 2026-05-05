@@ -32,7 +32,7 @@
 
 - [x] Payment provider interface (adapter pattern) with normalized PaymentIntent and SettlementResult schemas.
 - [x] Solana testnet USDC adapter: create_payment_intent and verify_payment_settlement via JSON-RPC.
-- [x] MoonPay adapter: on-ramp widget URL generation and transaction verification via REST API.
+- [x] Crossmint adapter: hosted checkout order creation and transaction verification via REST API.
 - [x] Payment reconciliation scheduled job (daily at 06:00 UTC).
 - [x] All payment actions record service fee and net-to-pool amounts.
 - [x] Integration tests for both providers with edge cases (21 test cases).

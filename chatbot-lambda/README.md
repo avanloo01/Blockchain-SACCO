@@ -4,7 +4,7 @@ Python AWS Lambda service for Telegram SACCO operations.
 
 ## Architecture Decisions Locked
 
-- Chain and settlement: Solana + direct USDC transfer intents.
+- Contribution checkout: Crossmint card checkout delivering USDC to the SACCO treasury wallet.
 - Embedded wallet option: Circle Programmable Wallets.
 - Governance threshold: loans above 100 USD go to on-chain vote lane.
 - Pool liquidity safety: total lent amount cannot exceed 60% of pool.
@@ -28,7 +28,7 @@ Python AWS Lambda service for Telegram SACCO operations.
 	- `pip install -r requirements.txt`
 3. Generate the Prisma client:
 	- `python3 -m prisma generate --schema prisma/schema.prisma`
-4. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN`.
+4. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN`, `CROSSMINT_SERVER_API_KEY`, and `SOLANA_TREASURY_ADDRESS`.
 5. Run tests:
 	- `pytest`
 
@@ -50,5 +50,5 @@ Python AWS Lambda service for Telegram SACCO operations.
 
 - Wire PostgreSQL (or Supabase Postgres) repositories.
 - Integrate Telegram sendMessage API in command responses.
-- Add Solana transfer verification service.
+- Add webhook-driven payment confirmation for hosted checkout.
 - Add on-chain governance proposal and vote tracking.

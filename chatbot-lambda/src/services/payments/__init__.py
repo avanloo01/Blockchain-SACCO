@@ -3,7 +3,7 @@ from src.services.payments.base import PaymentProvider
 
 _PROVIDER_IMPORTS: dict[str, tuple[str, str]] = {
     "solana_testnet": ("src.services.payments.solana_testnet", "SolanaTestnetProvider"),
-    "moonpay": ("src.services.payments.moonpay", "MoonpayProvider"),
+    "crossmint": ("src.services.payments.crossmint", "CrossmintProvider"),
 }
 
 _instance: PaymentProvider | None = None

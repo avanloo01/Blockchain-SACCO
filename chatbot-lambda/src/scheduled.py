@@ -69,6 +69,7 @@ def payment_reconciliation_handler(_event: dict[str, Any], _context: Any) -> dic
     any intents that may have been missed.
     """
     from src.repositories.member_repo import add_contribution_by_member_id
+    from src.config import settings
     from src.services.payments import get_payment_provider
     from src.services.payments.base import PaymentStatus
 
@@ -78,20 +79,25 @@ def payment_reconciliation_handler(_event: dict[str, Any], _context: Any) -> dic
     failed = 0
 
     for intent in pending:
-        if not intent.txSignature:
+        if settings.payment_provider != "crossmint" and not intent.txSignature:
             continue
+
+        verification_reference = intent.txSignature or intent.idempotencyKey or intent.id
 
         try:
             result = provider.verify_payment_settlement(
                 intent_id=intent.idempotencyKey or intent.id,
-                tx_signature=intent.txSignature,
+                tx_signature=verification_reference,
             )
         except Exception:
             logger.exception("Reconciliation error for intent %s", intent.id)
             continue
 
         if result.status == PaymentStatus.CONFIRMED:
-            mark_billing_settled(intent_id=intent.id, tx_signature=intent.txSignature)
+            mark_billing_settled(
+                intent_id=intent.id,
+                tx_signature=result.tx_signature or verification_reference,
+            )
             member = intent.member if intent.member else None
             if member:
                 add_contribution_by_member_id(
@@ -116,7 +122,13 @@ def payment_reconciliation_handler(_event: dict[str, Any], _context: Any) -> dic
     logger.info("Reconciliation complete: confirmed=%d failed=%d", confirmed, failed)
     return {
         "status": "ok",
-        "checked": len([i for i in pending if i.txSignature]),
+        "checked": len(
+            [
+                i
+                for i in pending
+                if settings.payment_provider == "crossmint" or i.txSignature
+            ]
+        ),
         "confirmed": confirmed,
         "failed": failed,
     }

@@ -26,6 +26,18 @@ _SIGNUP_PROMPT = (
 )
 
 
+def _verify_usage() -> str:
+    if settings.payment_provider == "crossmint":
+        return "Usage: /verify <intent_id>"
+    return "Usage: /verify <intent_id> <tx_signature>"
+
+
+def _verify_follow_up(intent_id: str) -> str:
+    if settings.payment_provider == "crossmint":
+        return f"\nAfter completing checkout, verify with:\n/verify {intent_id}"
+    return f"\nAfter sending, verify with:\n/verify {intent_id} <tx_signature>"
+
+
 def dispatch_command(chat_id: str, text: str) -> str:
     parts = text.split()
     command = parts[0].lower() if parts else ""
@@ -48,8 +60,8 @@ def dispatch_command(chat_id: str, text: str) -> str:
 
     if command == "/help":
         return (
-            "Use /contribute 25 to get a USDC transfer intent.\n"
-            "Use /verify <intent_id> <tx_signature> to confirm a payment.\n"
+            "Use /contribute 25 to start a USDC contribution.\n"
+            f"Use {_verify_usage().replace('Usage: ', '')} to confirm a payment.\n"
             "Use /loan_request 120 3 to request a 3-month loan.\n"
             "Use /proposals to list active governance proposals.\n"
             "Use /vote <loan_id> yes|no to cast your governance vote.\n"
@@ -102,14 +114,15 @@ def dispatch_command(chat_id: str, text: str) -> str:
             lines.append(f"Memo: {intent.memo}")
         if intent.payment_url:
             lines.append(f"Payment link: {intent.payment_url}")
-        lines.append(f"\nAfter sending, verify with:\n/verify {intent.intent_id} <tx_signature>")
+        lines.append(_verify_follow_up(intent.intent_id))
         return "\n".join(lines)
 
     if command == "/verify":
-        if len(parts) < 3:
-            return "Usage: /verify <intent_id> <tx_signature>"
+        requires_reference = settings.payment_provider != "crossmint"
+        if len(parts) < 2 or (requires_reference and len(parts) < 3):
+            return _verify_usage()
         intent_id = parts[1]
-        tx_signature = parts[2]
+        tx_signature = parts[2] if len(parts) > 2 else intent_id
 
         billing = get_billing_intent_by_idempotency_key(intent_id)
         if billing is None or billing.memberId != member.id:
@@ -123,17 +136,26 @@ def dispatch_command(chat_id: str, text: str) -> str:
         )
 
         if result.status == PaymentStatus.CONFIRMED:
-            mark_billing_settled(intent_id=billing.id, tx_signature=tx_signature)
+            confirmation_reference = result.tx_signature or tx_signature or intent_id
+            mark_billing_settled(
+                intent_id=billing.id,
+                tx_signature=confirmation_reference,
+            )
             add_contribution(
                 telegram_chat_id=chat_id,
                 amount_usd=billing.netPoolAmountUsd,
             )
+            preview = (
+                f"{confirmation_reference[:16]}..."
+                if len(confirmation_reference) > 16
+                else confirmation_reference
+            )
             return (
-                f"Payment confirmed! Tx: {tx_signature[:16]}...\n"
+                f"Payment confirmed! Reference: {preview}\n"
                 f"{billing.netPoolAmountUsd:.2f} USDC credited to your contribution balance."
             )
         elif result.status == PaymentStatus.PENDING:
-            return "Transaction found but not yet finalized. Please try again in a minute."
+            return "Payment found but not yet finalized. Please try again in a minute."
         else:
             return f"Verification failed: {result.error or 'transaction error on-chain'}"
 
