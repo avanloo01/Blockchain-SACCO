@@ -19,6 +19,11 @@ export function Nav() {
           </Link>
         </li>
         <li>
+          <Link href="/login" className={styles.link}>
+            Log In
+          </Link>
+        </li>
+        <li>
           <Link href="/signup" className={`btn btn-primary ${styles.cta}`}>
             Sign Up
           </Link>

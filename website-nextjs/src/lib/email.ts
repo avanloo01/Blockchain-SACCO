@@ -43,3 +43,44 @@ export async function sendVerificationEmail(
   }
   return { success: true };
 }
+
+export async function sendLoginEmail(
+  to: string,
+  loginUrl: string,
+): Promise<{ success: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    return { success: false, error: "RESEND_API_KEY is not configured" };
+  }
+
+  const resend = new Resend(apiKey);
+  const { error } = await resend.emails.send({
+    from: FROM_ADDRESS,
+    to,
+    subject: "Your Blockchain SACCO sign-in link",
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2>Sign in to Blockchain SACCO</h2>
+        <p>Click the button below to sign in to your account. This link expires in 15 minutes.</p>
+        <a href="${loginUrl}"
+           style="display: inline-block; padding: 12px 24px; background: #2563eb;
+                  color: #fff; text-decoration: none; border-radius: 6px; margin: 16px 0;">
+          Sign In
+        </a>
+        <p style="color: #666; font-size: 13px;">
+          If the button doesn't work, copy and paste this link into your browser:<br/>
+          <a href="${loginUrl}">${loginUrl}</a>
+        </p>
+        <p style="color: #999; font-size: 12px; margin-top: 24px;">
+          If you did not request this link, you can safely ignore this email.
+        </p>
+      </div>
+    `,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}

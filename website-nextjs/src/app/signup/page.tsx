@@ -117,7 +117,7 @@ export default function SignupPage() {
       </form>
 
       <p className={styles.alt} style={{ marginTop: "1.5rem" }}>
-        Already have an account? <Link href="/api/auth/signin">Sign in</Link>
+        Already have an account? <Link href="/login">Sign in</Link>
       </p>
     </div>
   );
