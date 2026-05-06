@@ -164,7 +164,7 @@ function CrossmintCheckoutContent() {
                       enabled: true,
                       allowedMethods: {
                         card: true,
-                        applePay: false,
+                        applePay: true,
                         googlePay: true,
                       },
                     },
