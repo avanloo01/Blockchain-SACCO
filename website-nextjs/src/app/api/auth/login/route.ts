@@ -73,7 +73,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const host = req.headers.get("host") ?? "localhost:3000";
+  const protocol = host.startsWith("localhost") ? "http" : "https";
+  const baseUrl = process.env.NEXTAUTH_URL || `${protocol}://${host}`;
   const loginUrl = `${baseUrl}/login/verify?token=${token}&email=${encodeURIComponent(email)}`;
   const emailResult = await sendLoginEmail(email, loginUrl);
 
