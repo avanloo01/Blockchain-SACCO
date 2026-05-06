@@ -100,10 +100,6 @@
   border-radius: 18px;
 }
 
-.embedShell :global(span#crossmint-focus-target) {
-  display: none;
-}
-
 .cardHeader {
   display: flex;
   justify-content: space-between;

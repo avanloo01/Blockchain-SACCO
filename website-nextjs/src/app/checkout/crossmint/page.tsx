@@ -169,7 +169,7 @@ function CrossmintCheckoutContent() {
                       },
                     },
                     crypto: {
-                      enabled: true,
+                      enabled: false,
                     },
                     defaultMethod: "fiat",
                   }}
