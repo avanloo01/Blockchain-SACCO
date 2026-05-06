@@ -76,9 +76,9 @@ class CrossmintProvider(PaymentProvider):
             "x-api-key": settings.crossmint_server_api_key,
         }
 
-    def _build_checkout_url(self, *, intent_id: str, amount_usd: float) -> str:
+    def _build_checkout_url(self, *, order_id: str, client_secret: str) -> str:
         base_url = settings.website_url.rstrip("/")
-        params = urlencode({"intentId": intent_id, "amount": _format_usd(amount_usd)})
+        params = urlencode({"orderId": order_id, "clientSecret": client_secret})
         return f"{base_url}/checkout/crossmint?{params}"
 
     def create_payment_intent(
@@ -88,29 +88,74 @@ class CrossmintProvider(PaymentProvider):
         idempotency_key: str | None = None,
         receipt_email: str | None = None,
     ) -> PaymentIntent:
-        """Create a pre-intent checkout link.
+        """Create a server-side Crossmint order and return a checkout link.
 
-        The Crossmint order is created client-side by the embedded checkout
-        component.  The frontend later links the live Crossmint orderId back
-        to this intent via POST /api/checkout/link-order, where it is stored
-        in the BillingIntent.memo column.
+        The Crossmint order is created via the Crossmint Orders API.  The
+        returned orderId is stored as the billing intent idempotency key so
+        the Telegram /verify command can look it up directly.  The clientSecret
+        is embedded in the checkout URL so the embedded checkout component can
+        display the pre-configured order without re-specifying line items.
         """
-        del receipt_email  # not required for client-side order creation
+        api_key = settings.crossmint_server_api_key
+        if not api_key:
+            raise ValueError("CROSSMINT_SERVER_API_KEY is not configured")
+
+        treasury = settings.crossmint_wallet_address
+        if not treasury:
+            raise ValueError("CROSSMINT_WALLET_ADDRESS is not configured")
+
+        if not receipt_email:
+            raise ValueError(
+                "Crossmint checkout requires a member with a verified email; "
+                "this member is missing an email address"
+            )
 
         token_locator = settings.crossmint_token_locator
-        treasury = settings.crossmint_wallet_address
-
-        intent_id = idempotency_key or str(uuid.uuid4())
         fee_usd = round(amount_usd * settings.service_fee_percent / 100.0, 2)
         net_pool = round(amount_usd - fee_usd, 2)
 
+        payload = {
+            "lineItems": [
+                {
+                    "tokenLocator": token_locator,
+                    "executionParameters": {
+                        "mode": "exact-in",
+                        "amount": _format_usd(amount_usd),
+                        "maxSlippageBps": settings.crossmint_slippage_bps,
+                    },
+                }
+            ],
+            "recipient": {"walletAddress": treasury},
+            "payment": {"receiptEmail": receipt_email},
+        }
+
+        try:
+            response = requests.post(
+                f"{self._api_base()}/api/2022-06-09/orders",
+                headers=self._headers(),
+                json=payload,
+                timeout=15,
+            )
+            if not response.ok:
+                raise ValueError(_read_error_message(response))
+            data = response.json()
+        except requests.RequestException as exc:
+            raise ValueError(f"Crossmint API error: {exc}") from exc
+
+        client_secret: str = data.get("clientSecret") or ""
+        order_id: str = (
+            (data.get("order") or {}).get("orderId")
+            or idempotency_key
+            or str(uuid.uuid4())
+        )
+
         payment_url = self._build_checkout_url(
-            intent_id=intent_id,
-            amount_usd=amount_usd,
+            order_id=order_id,
+            client_secret=client_secret,
         )
 
         return PaymentIntent(
-            intent_id=intent_id,
+            intent_id=order_id,
             member_id=member_id,
             amount_usd=amount_usd,
             service_fee_usd=fee_usd,

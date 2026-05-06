@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CrossmintCheckoutProvider,
@@ -51,28 +51,10 @@ function VerifyCommand({ intentId }: { intentId: string }) {
   );
 }
 
-function StatusPanel({ intentId }: { intentId: string }) {
+function StatusPanel({ orderId }: { orderId: string }) {
   const { order } = useCrossmintCheckout();
-  const orderId = typeof (order as Record<string, unknown> | undefined)?.orderId === "string"
-    ? (order as Record<string, unknown>).orderId as string
-    : null;
   const phase = typeof order?.phase === "string" ? order.phase : "waiting";
   const isComplete = phase === "completed";
-
-  // As soon as Crossmint creates the order (client-side), link its orderId back
-  // to our billing intent so the Telegram /verify command can look it up.
-  const linkedRef = useRef(false);
-  useEffect(() => {
-    if (!orderId || !intentId || linkedRef.current) return;
-    linkedRef.current = true;
-    fetch("/api/checkout/link-order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ intentId, orderId }),
-    }).catch(() => {
-      linkedRef.current = false; // allow retry on next render
-    });
-  }, [orderId, intentId]);
 
   return (
     <aside className={styles.statusCard}>
@@ -89,7 +71,7 @@ function StatusPanel({ intentId }: { intentId: string }) {
           ? "Payment completed. Return to Telegram and confirm the contribution so the SACCO ledger is updated."
           : "Complete the checkout, then return to Telegram and run the verification command below."}
       </p>
-      <VerifyCommand intentId={intentId} />
+      <VerifyCommand intentId={orderId} />
       <div className={styles.helperLinks}>
         <Link href="/dashboard/member">Member dashboard</Link>
         <Link href="/onboarding">Onboarding guide</Link>
@@ -116,32 +98,16 @@ function InvalidLink({ reason }: { reason: string }) {
 function CrossmintCheckoutContent() {
   const searchParams = useSearchParams();
   const apiKey = process.env.NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY ?? "";
-  const tokenLocator = process.env.NEXT_PUBLIC_CROSSMINT_TOKEN_LOCATOR ?? "";
-  const treasuryWallet = process.env.NEXT_PUBLIC_CROSSMINT_WALLET_ADDRESS ?? "";
 
-  const intentId = searchParams.get("intentId")?.trim() ?? "";
-  const amount = searchParams.get("amount")?.trim() ?? "";
-
-  const amountLabel = useMemo(() => {
-    const parsed = Number(amount);
-    return Number.isFinite(parsed) ? `${parsed.toFixed(2)} USD` : "Contribution checkout";
-  }, [amount]);
+  const orderId = searchParams.get("orderId")?.trim() ?? "";
+  const clientSecret = searchParams.get("clientSecret")?.trim() ?? "";
 
   if (!apiKey) {
     return <InvalidLink reason="The website is missing the API key." />;
   }
 
-  if (!intentId) {
-    return <InvalidLink reason="The payment link is missing the intent ID." />;
-  }
-
-  if (!tokenLocator || !treasuryWallet) {
-    return <InvalidLink reason="The checkout is not yet configured. Please contact the SACCO admin." />;
-  }
-
-  const parsedAmount = Number(amount);
-  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-    return <InvalidLink reason="The payment link has an invalid amount." />;
+  if (!orderId) {
+    return <InvalidLink reason="The payment link is missing the order ID." />;
   }
 
   return (
@@ -156,12 +122,8 @@ function CrossmintCheckoutContent() {
         </div>
         <div className={styles.heroMeta}>
           <div className={styles.metaItem}>
-            <span className={styles.label}>Intent ID</span>
-            <strong className={styles.metaValue}>{intentId}</strong>
-          </div>
-          <div className={styles.metaItem}>
-            <span className={styles.label}>Amount</span>
-            <strong className={styles.metaValue}>{amountLabel}</strong>
+            <span className={styles.label}>Order ID</span>
+            <strong className={styles.metaValue}>{orderId}</strong>
           </div>
         </div>
       </section>
@@ -182,14 +144,8 @@ function CrossmintCheckoutContent() {
             <CrossmintCheckoutProvider>
               <div className={styles.embedShell}>
                 <CrossmintEmbeddedCheckout
-                  lineItems={{
-                    tokenLocator,
-                    executionParameters: {
-                      mode: "exact-in",
-                      amount: parsedAmount.toFixed(2),
-                    },
-                  }}
-                  recipient={{ walletAddress: treasuryWallet }}
+                  orderId={orderId}
+                  {...(clientSecret ? { clientSecret } : {})}
                   payment={{
                     fiat: {
                       enabled: true,
@@ -293,7 +249,7 @@ function CrossmintCheckoutContent() {
                   }}
                 />
               </div>
-              <StatusPanel intentId={intentId} />
+              <StatusPanel orderId={orderId} />
             </CrossmintCheckoutProvider>
           </CrossmintProvider>
         </section>
