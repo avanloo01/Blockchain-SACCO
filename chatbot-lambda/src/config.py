@@ -27,7 +27,7 @@ class Settings:
     crossmint_token_locator: str = os.getenv("CROSSMINT_TOKEN_LOCATOR") or _default_crossmint_token_locator(
         os.getenv("APP_ENV", "dev")
     )
-    crossmint_slippage_bps: str = os.getenv("CROSSMINT_SLIPPAGE_BPS", "500")
+    crossmint_slippage_bps: int = int(os.getenv("CROSSMINT_SLIPPAGE_BPS", "500"))
 
 
 settings = Settings()
