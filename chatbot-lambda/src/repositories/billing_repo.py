@@ -82,3 +82,23 @@ def get_pending_billing_intents() -> list[BillingIntent]:
 def get_billing_intent_by_idempotency_key(key: str) -> BillingIntent | None:
     db = get_db()
     return db.billingintent.find_unique(where={"idempotencyKey": key})
+
+
+def link_crossmint_order_id(idempotency_key: str, crossmint_order_id: str) -> bool:
+    """Store the live Crossmint orderId in the memo column so /verify can look it up.
+
+    Returns True if the record was found and updated, False otherwise.
+    """
+    db = get_db()
+    existing = db.billingintent.find_unique(where={"idempotencyKey": idempotency_key})
+    if existing is None:
+        logger.warning("link_crossmint_order_id: no billing intent for key=%s", idempotency_key)
+        return False
+    db.billingintent.update(
+        where={"id": existing.id},
+        data={"memo": crossmint_order_id},
+    )
+    logger.info(
+        "Linked Crossmint orderId=%s to billing intent id=%s", crossmint_order_id, existing.id
+    )
+    return True

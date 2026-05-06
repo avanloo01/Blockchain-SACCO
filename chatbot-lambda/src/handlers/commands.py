@@ -142,9 +142,20 @@ def dispatch_command(chat_id: str, text: str) -> str:
         if billing.status == "confirmed":
             return "This payment has already been confirmed."
 
+        # For the Crossmint provider the live orderId is stored in memo
+        # once the frontend checkout component creates the order.
+        if settings.payment_provider == "crossmint":
+            crossmint_order_id = billing.memo if isinstance(billing.memo, str) and billing.memo else None
+            if not crossmint_order_id:
+                return (
+                    "Checkout not yet started. Open the payment link, complete the checkout, "
+                    "then run /verify again."
+                )
+            tx_signature = crossmint_order_id
+
         provider = get_payment_provider()
         result = provider.verify_payment_settlement(
-            intent_id=intent_id, tx_signature=tx_signature
+            intent_id=tx_signature, tx_signature=tx_signature
         )
 
         if result.status == PaymentStatus.CONFIRMED:

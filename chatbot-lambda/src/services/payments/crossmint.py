@@ -1,12 +1,15 @@
 """Crossmint payment adapter.
 
-Creates Crossmint headless checkout orders for SACCO contribution links and
-verifies settlement by polling order status.
+Creates contribution checkout links and verifies settlement by polling the
+Crossmint headless order API. Orders are created client-side via the embedded
+checkout component; the bot only builds a pre-intent URL that the frontend later
+links to a live Crossmint order ID.
 """
 
 from __future__ import annotations
 
 import logging
+import uuid
 from urllib.parse import quote, urlencode
 
 import requests
@@ -73,22 +76,9 @@ class CrossmintProvider(PaymentProvider):
             "x-api-key": settings.crossmint_server_api_key,
         }
 
-    def _build_checkout_url(
-        self,
-        *,
-        order_id: str,
-        client_secret: str,
-        amount_usd: float,
-    ) -> str:
+    def _build_checkout_url(self, *, intent_id: str, amount_usd: float) -> str:
         base_url = settings.website_url.rstrip("/")
-        params = urlencode(
-            {
-                "orderId": order_id,
-                "clientSecret": client_secret,
-                "intentId": order_id,
-                "amount": _format_usd(amount_usd),
-            }
-        )
+        params = urlencode({"intentId": intent_id, "amount": _format_usd(amount_usd)})
         return f"{base_url}/checkout/crossmint?{params}"
 
     def create_payment_intent(
@@ -98,98 +88,37 @@ class CrossmintProvider(PaymentProvider):
         idempotency_key: str | None = None,
         receipt_email: str | None = None,
     ) -> PaymentIntent:
-        del idempotency_key
+        """Create a pre-intent checkout link.
 
-        api_key = settings.crossmint_server_api_key
-        if not api_key:
-            raise ValueError("CROSSMINT_SERVER_API_KEY is not configured")
-
-        treasury = settings.crossmint_wallet_address
-        if not treasury:
-            raise ValueError("CROSSMINT_WALLET_ADDRESS is not configured")
+        The Crossmint order is created client-side by the embedded checkout
+        component.  The frontend later links the live Crossmint orderId back
+        to this intent via POST /api/checkout/link-order, where it is stored
+        in the BillingIntent.memo column.
+        """
+        del receipt_email  # not required for client-side order creation
 
         token_locator = settings.crossmint_token_locator
-        if not token_locator:
-            raise ValueError("CROSSMINT_TOKEN_LOCATOR is not configured")
+        treasury = settings.crossmint_wallet_address
 
-        if not isinstance(receipt_email, str) or not receipt_email.strip():
-            raise ValueError(
-                "Your SACCO account is missing an email address. Complete signup on the website before contributing."
-            )
-
-        receipt_email = receipt_email.strip()
-
+        intent_id = idempotency_key or str(uuid.uuid4())
         fee_usd = round(amount_usd * settings.service_fee_percent / 100.0, 2)
         net_pool = round(amount_usd - fee_usd, 2)
-        payload = {
-            "recipient": {"walletAddress": treasury},
-            "payment": {
-                "method": "card",
-                "currency": "usd",
-                "receiptEmail": receipt_email,
-            },
-            "lineItems": [
-                {
-                    "tokenLocator": token_locator,
-                    "executionParameters": {
-                        "mode": "exact-in",
-                        "amount": _format_usd(amount_usd),
-                        "maxSlippageBps": settings.crossmint_slippage_bps,
-                    },
-                }
-            ],
-            "locale": "en-US",
-        }
-
-        try:
-            response = requests.post(
-                f"{self._api_base()}/api/2022-06-09/orders",
-                json=payload,
-                headers=self._headers(),
-                timeout=20,
-            )
-        except requests.RequestException as exc:
-            logger.error("Crossmint API error creating order: %s", exc)
-            raise ValueError(f"Crossmint order creation failed: {exc}") from exc
-
-        if not response.ok:
-            raise ValueError(_read_error_message(response))
-
-        try:
-            data = response.json()
-        except ValueError as exc:
-            raise ValueError("Crossmint order creation returned invalid JSON") from exc
-
-        if not isinstance(data, dict):
-            raise ValueError("Crossmint order creation returned an unexpected payload")
-
-        client_secret = data.get("clientSecret")
-        order = data.get("order") or {}
-        if not isinstance(order, dict):
-            raise ValueError("Crossmint order payload is missing the order object")
-
-        order_id = order.get("orderId")
-        if not isinstance(order_id, str) or not order_id:
-            raise ValueError("Crossmint order payload is missing orderId")
-        if not isinstance(client_secret, str) or not client_secret:
-            raise ValueError("Crossmint order payload is missing clientSecret")
 
         payment_url = self._build_checkout_url(
-            order_id=order_id,
-            client_secret=client_secret,
+            intent_id=intent_id,
             amount_usd=amount_usd,
         )
 
         return PaymentIntent(
-            intent_id=order_id,
+            intent_id=intent_id,
             member_id=member_id,
             amount_usd=amount_usd,
             service_fee_usd=fee_usd,
             net_pool_amount_usd=net_pool,
             asset="USDC",
-            network=token_locator.split(":", 1)[0],
+            network=token_locator.split(":", 1)[0] if token_locator else "solana",
             status=PaymentStatus.PENDING,
-            recipient_address=treasury,
+            recipient_address=treasury or None,
             memo=None,
             payment_url=payment_url,
         )

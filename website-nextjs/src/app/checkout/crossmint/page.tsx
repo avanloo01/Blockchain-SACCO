@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CrossmintCheckoutProvider,
@@ -53,8 +53,26 @@ function VerifyCommand({ intentId }: { intentId: string }) {
 
 function StatusPanel({ intentId }: { intentId: string }) {
   const { order } = useCrossmintCheckout();
+  const orderId = typeof (order as Record<string, unknown> | undefined)?.orderId === "string"
+    ? (order as Record<string, unknown>).orderId as string
+    : null;
   const phase = typeof order?.phase === "string" ? order.phase : "waiting";
   const isComplete = phase === "completed";
+
+  // As soon as Crossmint creates the order (client-side), link its orderId back
+  // to our billing intent so the Telegram /verify command can look it up.
+  const linkedRef = useRef(false);
+  useEffect(() => {
+    if (!orderId || !intentId || linkedRef.current) return;
+    linkedRef.current = true;
+    fetch("/api/checkout/link-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ intentId, orderId }),
+    }).catch(() => {
+      linkedRef.current = false; // allow retry on next render
+    });
+  }, [orderId, intentId]);
 
   return (
     <aside className={styles.statusCard}>
@@ -98,10 +116,10 @@ function InvalidLink({ reason }: { reason: string }) {
 function CrossmintCheckoutContent() {
   const searchParams = useSearchParams();
   const apiKey = process.env.NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY ?? "";
+  const tokenLocator = process.env.NEXT_PUBLIC_CROSSMINT_TOKEN_LOCATOR ?? "";
+  const treasuryWallet = process.env.NEXT_PUBLIC_CROSSMINT_WALLET_ADDRESS ?? "";
 
-  const orderId = searchParams.get("orderId")?.trim() ?? "";
-  const clientSecret = searchParams.get("clientSecret")?.trim() ?? "";
-  const intentId = searchParams.get("intentId")?.trim() || orderId;
+  const intentId = searchParams.get("intentId")?.trim() ?? "";
   const amount = searchParams.get("amount")?.trim() ?? "";
 
   const amountLabel = useMemo(() => {
@@ -110,13 +128,20 @@ function CrossmintCheckoutContent() {
   }, [amount]);
 
   if (!apiKey) {
-    return (
-      <InvalidLink reason="The website is missing the API key." />
-    );
+    return <InvalidLink reason="The website is missing the API key." />;
   }
 
-  if (!orderId) {
-    return <InvalidLink reason="The payment link is missing the Crossmint order ID." />;
+  if (!intentId) {
+    return <InvalidLink reason="The payment link is missing the intent ID." />;
+  }
+
+  if (!tokenLocator || !treasuryWallet) {
+    return <InvalidLink reason="The checkout is not yet configured. Please contact the SACCO admin." />;
+  }
+
+  const parsedAmount = Number(amount);
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    return <InvalidLink reason="The payment link has an invalid amount." />;
   }
 
   return (
@@ -149,7 +174,7 @@ function CrossmintCheckoutContent() {
               <h2>Crossmint embedded checkout</h2>
             </div>
             <p className={styles.supportText}>
-              Use card, Apple Pay, or Google Pay if available in your region.
+              Pay with card, Apple Pay, or connect a crypto wallet.
             </p>
           </div>
 
@@ -157,19 +182,25 @@ function CrossmintCheckoutContent() {
             <CrossmintCheckoutProvider>
               <div className={styles.embedShell}>
                 <CrossmintEmbeddedCheckout
-                  orderId={orderId}
-                  clientSecret={clientSecret || undefined}
+                  lineItems={{
+                    tokenLocator,
+                    executionParameters: {
+                      mode: "exact-in",
+                      amount: parsedAmount.toFixed(2),
+                    },
+                  }}
+                  recipient={{ walletAddress: treasuryWallet }}
                   payment={{
                     fiat: {
                       enabled: true,
                       allowedMethods: {
                         card: true,
                         applePay: true,
-                        googlePay: true,
+                        googlePay: false,
                       },
                     },
                     crypto: {
-                      enabled: false,
+                      enabled: true,
                     },
                     defaultMethod: "fiat",
                   }}
@@ -296,3 +327,4 @@ export default function CrossmintCheckoutPage() {
     </Suspense>
   );
 }
+
