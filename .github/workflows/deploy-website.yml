@@ -48,22 +48,31 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          vercel deploy --prod --yes --token="$VERCEL_TOKEN" \
-            --build-env "NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY=$NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY" \
-            --build-env "NEXT_PUBLIC_CROSSMINT_TOKEN_LOCATOR=$NEXT_PUBLIC_CROSSMINT_TOKEN_LOCATOR" \
-            --build-env "NEXT_PUBLIC_CROSSMINT_WALLET_ADDRESS=$NEXT_PUBLIC_CROSSMINT_WALLET_ADDRESS" \
-            --build-env "RESEND_API_KEY=$RESEND_API_KEY" \
-            --build-env "RESEND_FROM_EMAIL=$RESEND_FROM_EMAIL" \
-            --build-env "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" \
-            --build-env "NEXTAUTH_URL=$NEXTAUTH_URL" \
-            --build-env "SUPABASE_URL=$SUPABASE_URL" \
-            --build-env "SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY" \
-            --env "NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY=$NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY" \
-            --env "NEXT_PUBLIC_CROSSMINT_TOKEN_LOCATOR=$NEXT_PUBLIC_CROSSMINT_TOKEN_LOCATOR" \
-            --env "NEXT_PUBLIC_CROSSMINT_WALLET_ADDRESS=$NEXT_PUBLIC_CROSSMINT_WALLET_ADDRESS" \
-            --env "RESEND_API_KEY=$RESEND_API_KEY" \
-            --env "RESEND_FROM_EMAIL=$RESEND_FROM_EMAIL" \
-            --env "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" \
-            --env "NEXTAUTH_URL=$NEXTAUTH_URL" \
-            --env "SUPABASE_URL=$SUPABASE_URL" \
-            --env "SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY"
+          # Build the deploy command, only passing --env for variables that are
+          # non-empty. Passing --env "KEY=" would override a correctly-configured
+          # Vercel project setting with an empty string, silently breaking the
+          # checkout page. Server-side vars (no NEXT_PUBLIC_ prefix) only need
+          # --env; the NEXT_PUBLIC_ vars are now read server-side in page.tsx,
+          # so --build-env is no longer required for them.
+          ARGS=(--prod --yes --token="$VERCEL_TOKEN")
+
+          [ -n "$NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY" ] && \
+            ARGS+=(--env "NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY=$NEXT_PUBLIC_CROSSMINT_CLIENT_API_KEY")
+          [ -n "$NEXT_PUBLIC_CROSSMINT_TOKEN_LOCATOR" ] && \
+            ARGS+=(--env "NEXT_PUBLIC_CROSSMINT_TOKEN_LOCATOR=$NEXT_PUBLIC_CROSSMINT_TOKEN_LOCATOR")
+          [ -n "$NEXT_PUBLIC_CROSSMINT_WALLET_ADDRESS" ] && \
+            ARGS+=(--env "NEXT_PUBLIC_CROSSMINT_WALLET_ADDRESS=$NEXT_PUBLIC_CROSSMINT_WALLET_ADDRESS")
+          [ -n "$RESEND_API_KEY" ] && \
+            ARGS+=(--env "RESEND_API_KEY=$RESEND_API_KEY")
+          [ -n "$RESEND_FROM_EMAIL" ] && \
+            ARGS+=(--env "RESEND_FROM_EMAIL=$RESEND_FROM_EMAIL")
+          [ -n "$NEXTAUTH_SECRET" ] && \
+            ARGS+=(--env "NEXTAUTH_SECRET=$NEXTAUTH_SECRET")
+          [ -n "$NEXTAUTH_URL" ] && \
+            ARGS+=(--env "NEXTAUTH_URL=$NEXTAUTH_URL")
+          [ -n "$SUPABASE_URL" ] && \
+            ARGS+=(--env "SUPABASE_URL=$SUPABASE_URL")
+          [ -n "$SUPABASE_SERVICE_KEY" ] && \
+            ARGS+=(--env "SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY")
+
+          vercel deploy "${ARGS[@]}"
