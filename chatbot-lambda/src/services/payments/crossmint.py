@@ -172,7 +172,6 @@ class CrossmintProvider(PaymentProvider):
                     "executionParameters": {
                         "mode": "exact-in",
                         "amount": _format_usd(amount_usd),
-                        "slippageBps": settings.crossmint_slippage_bps,
                     },
                 }
             ],
