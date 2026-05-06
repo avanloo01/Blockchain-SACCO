@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { StatCard } from "@/components/StatCard";
 import { supabaseQuery } from "@/lib/supabase";
 import styles from "../dashboard.module.css";
@@ -66,12 +67,17 @@ export default async function PublicDashboard() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <h2>Pool Dashboard</h2>
-        <p className={styles.headerSub}>
-          Public aggregate metrics for the Blockchain SACCO pool. No personal
-          data is exposed.
-        </p>
+      <div className={styles.headerRow}>
+        <div className={styles.header}>
+          <h2>Pool Dashboard</h2>
+          <p className={styles.headerSub}>
+            Public aggregate metrics for the Blockchain SACCO pool. No personal
+            data is exposed.
+          </p>
+        </div>
+        <Link href="/dashboard/member" className="btn btn-primary">
+          My Dashboard
+        </Link>
       </div>
 
       <div className={styles.grid}>

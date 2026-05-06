@@ -6,6 +6,7 @@
   max-width: 1100px;
   margin: 0 auto;
   width: 100%;
+  position: relative;
 }
 
 .logo {
@@ -44,8 +45,57 @@
   color: #fff;
 }
 
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  z-index: 10;
+}
+
+.hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--foreground);
+  border-radius: 2px;
+}
+
 @media (max-width: 640px) {
+  .hamburger {
+    display: flex;
+  }
+
   .links {
-    gap: 1rem;
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1.25rem;
+    z-index: 100;
+  }
+
+  .links li {
+    width: 100%;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .links li:last-child {
+    border-bottom: none;
+    padding-top: 0.75rem;
+  }
+
+  .linksOpen {
+    display: flex;
   }
 }
