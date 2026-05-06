@@ -165,9 +165,9 @@ function CrossmintCheckoutContent() {
                       fontFamily: "var(--font-sans)",
                       borderRadius: "18px",
                       colors: {
-                        backgroundPrimary: "#5a7090",
+                        backgroundPrimary: "#0a111d",
                         borderPrimary: "#2f3f57",
-                        textPrimary: "#2f3f57",
+                        textPrimary: "#5a7090",
                         textSecondary: "#a2b4cc",
                         accent: "#2dd4bf",
                         warning: "#f59e0b",
