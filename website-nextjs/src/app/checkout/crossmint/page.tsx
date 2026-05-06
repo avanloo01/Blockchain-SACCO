@@ -130,13 +130,13 @@ function CrossmintCheckoutContent() {
           </p>
         </div>
         <div className={styles.heroMeta}>
-          <div>
+          <div className={styles.metaItem}>
             <span className={styles.label}>Intent ID</span>
-            <strong>{intentId}</strong>
+            <strong className={styles.metaValue}>{intentId}</strong>
           </div>
-          <div>
+          <div className={styles.metaItem}>
             <span className={styles.label}>Amount</span>
-            <strong>{amountLabel}</strong>
+            <strong className={styles.metaValue}>{amountLabel}</strong>
           </div>
         </div>
       </section>
@@ -155,44 +155,113 @@ function CrossmintCheckoutContent() {
 
           <CrossmintProvider apiKey={apiKey}>
             <CrossmintCheckoutProvider>
-              <CrossmintEmbeddedCheckout
-                orderId={orderId}
-                clientSecret={clientSecret || undefined}
-                payment={{
-                  fiat: {
-                    enabled: true,
-                    allowedMethods: {
-                      card: true,
-                      applePay: true,
-                      googlePay: true,
+              <div className={styles.embedShell}>
+                <CrossmintEmbeddedCheckout
+                  orderId={orderId}
+                  clientSecret={clientSecret || undefined}
+                  payment={{
+                    fiat: {
+                      enabled: true,
+                      allowedMethods: {
+                        card: true,
+                        applePay: false,
+                        googlePay: true,
+                      },
                     },
-                  },
-                  crypto: {
-                    enabled: false,
-                  },
-                  defaultMethod: "fiat",
-                }}
-                appearance={{
-                  variables: {
-                    fontFamily: "var(--font-sans)",
-                    borderRadius: "20px",
-                    colors: {
-                      backgroundPrimary: "#12151c",
-                      borderPrimary: "#273244",
-                      textPrimary: "#f5f7fb",
-                      textSecondary: "#9fb0c7",
-                      accent: "#2dd4bf",
-                      warning: "#f59e0b",
-                      danger: "#fb7185",
+                    crypto: {
+                      enabled: true,
                     },
-                  },
-                  rules: {
-                    DestinationInput: {
-                      display: "hidden",
+                    defaultMethod: "fiat",
+                  }}
+                  appearance={{
+                    variables: {
+                      fontFamily: "var(--font-sans)",
+                      borderRadius: "18px",
+                      colors: {
+                        backgroundPrimary: "#0a111d",
+                        borderPrimary: "#2f3f57",
+                        textPrimary: "#f3f6ff",
+                        textSecondary: "#a2b4cc",
+                        accent: "#2dd4bf",
+                        warning: "#f59e0b",
+                        danger: "#fb7185",
+                      },
                     },
-                  },
-                }}
-              />
+                    rules: {
+                      DestinationInput: {
+                        display: "hidden",
+                      },
+                      Label: {
+                        colors: {
+                          text: "#a2b4cc",
+                        },
+                      },
+                      Input: {
+                        borderRadius: "16px",
+                        colors: {
+                          text: "#f3f6ff",
+                          background: "#0b1422",
+                          border: "#30425b",
+                          boxShadow: "none",
+                          placeholder: "#7f90a8",
+                        },
+                        focus: {
+                          colors: {
+                            background: "#0d1627",
+                            border: "#2dd4bf",
+                            boxShadow: "0 0 0 1px #2dd4bf",
+                          },
+                        },
+                        hover: {
+                          colors: {
+                            background: "#0d1627",
+                            border: "#3b5070",
+                            boxShadow: "none",
+                          },
+                        },
+                      },
+                      Tab: {
+                        borderRadius: "16px",
+                        colors: {
+                          text: "#c7d3e7",
+                          background: "#0a1220",
+                          border: "#30425b",
+                          boxShadow: "none",
+                        },
+                        selected: {
+                          colors: {
+                            text: "#f5faff",
+                            background: "#0d1d2a",
+                            border: "#2dd4bf",
+                            boxShadow: "0 0 0 1px #2dd4bf",
+                          },
+                        },
+                        hover: {
+                          colors: {
+                            text: "#f0f6ff",
+                            background: "#0f1b2c",
+                            border: "#3b5070",
+                            boxShadow: "none",
+                          },
+                        },
+                      },
+                      PrimaryButton: {
+                        borderRadius: "14px",
+                        colors: {
+                          text: "#031520",
+                          background: "#2dd4bf",
+                        },
+                        hover: {
+                          colors: {
+                            text: "#031520",
+                            background: "#4fe3d1",
+                          },
+                        },
+                      },
+                    },
+                  }}
+                />
+              </div>
               <StatusPanel intentId={intentId} />
             </CrossmintCheckoutProvider>
           </CrossmintProvider>
