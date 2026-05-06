@@ -10,6 +10,7 @@ idempotency key so the Telegram /verify command can look it up directly.
 from __future__ import annotations
 
 import logging
+from typing import Any
 from urllib.parse import quote, urlencode
 
 import requests
@@ -104,13 +105,13 @@ class CrossmintProvider(PaymentProvider):
             raise ValueError("CROSSMINT_WALLET_ADDRESS is not configured")
 
         if not receipt_email:
-            raise ValueError("Member is missing an email address; cannot create Crossmint order")
+            raise ValueError("Member is missing an email address. Cannot create Crossmint order.")
 
         token_locator = settings.crossmint_token_locator
         fee_usd = round(amount_usd * settings.service_fee_percent / 100.0, 2)
         net_pool = round(amount_usd - fee_usd, 2)
 
-        payload: dict = {
+        payload: dict[str, Any] = {
             "lineItems": [
                 {
                     "tokenLocator": token_locator,
