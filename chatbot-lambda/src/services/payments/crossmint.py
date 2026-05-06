@@ -1,15 +1,14 @@
 """Crossmint payment adapter.
 
 Creates contribution checkout links and verifies settlement by polling the
-Crossmint headless order API. Orders are created client-side via the embedded
-checkout component; the bot only builds a pre-intent URL that the frontend later
-links to a live Crossmint order ID.
+Crossmint headless order API. Orders are created server-side via the Crossmint
+Orders API; the returned orderId and clientSecret are embedded in the checkout
+URL so the frontend can display the pre-configured embedded checkout.
 """
 
 from __future__ import annotations
 
 import logging
-import uuid
 from urllib.parse import quote, urlencode
 
 import requests
@@ -143,11 +142,13 @@ class CrossmintProvider(PaymentProvider):
             raise ValueError(f"Crossmint API error: {exc}") from exc
 
         client_secret: str = data.get("clientSecret") or ""
-        order_id: str = (
-            (data.get("order") or {}).get("orderId")
-            or idempotency_key
-            or str(uuid.uuid4())
-        )
+        if not client_secret:
+            raise ValueError("Crossmint API response is missing clientSecret")
+
+        order_data = data.get("order") if isinstance(data.get("order"), dict) else {}
+        order_id: str = order_data.get("orderId") or ""
+        if not order_id:
+            raise ValueError("Crossmint API response is missing orderId")
 
         payment_url = self._build_checkout_url(
             order_id=order_id,
