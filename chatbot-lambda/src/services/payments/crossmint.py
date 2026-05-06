@@ -112,6 +112,13 @@ class CrossmintProvider(PaymentProvider):
                 json={"chain": chain},
                 timeout=15,
             )
+            if response.status_code == 409:
+                # Wallet is already linked to a Crossmint user — that is fine;
+                # it means a previous setup call succeeded.  Log and continue.
+                logger.info(
+                    "Treasury wallet already linked to a Crossmint user (409); proceeding."
+                )
+                return
             if not response.ok:
                 raise ValueError(_read_error_message(response))
         except requests.RequestException as exc:
@@ -147,6 +154,11 @@ class CrossmintProvider(PaymentProvider):
         net_pool = round(amount_usd - fee_usd, 2)
 
         chain = token_locator.split(":", 1)[0] if ":" in token_locator else "solana"
+        # Attempt to link the treasury wallet.  If the wallet is already linked
+        # to any Crossmint user (HTTP 409), that is fine — the order can still
+        # be fulfilled.  The recipient.walletAddress field in the order payload
+        # is what Crossmint uses to route funds; the link step is only needed
+        # the very first time Crossmint sees an external wallet.
         self._link_wallet(
             user_email=receipt_email,
             wallet_address=treasury,
