@@ -139,16 +139,21 @@ def test_verify_without_rpc_url(mock_settings):
 # ── Crossmint provider tests ────────────────────────────────────────
 
 
+@patch("src.services.payments.crossmint.requests.put")
 @patch("src.services.payments.crossmint.requests.post")
 @patch("src.services.payments.crossmint.settings")
-def test_crossmint_create_payment_intent(mock_settings, mock_post):
+def test_crossmint_create_payment_intent(mock_settings, mock_post, mock_put):
     mock_settings.service_fee_percent = 1.0
     mock_settings.crossmint_server_api_key = "server_key_123"
     mock_settings.crossmint_wallet_address = "TreasuryWallet123"
-    mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    mock_settings.crossmint_token_locator = "solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
     mock_settings.crossmint_slippage_bps = "500"
     mock_settings.website_url = "https://blockchainsacco.com"
     mock_settings.app_env = "dev"
+
+    mock_link_resp = MagicMock()
+    mock_link_resp.ok = True
+    mock_put.return_value = mock_link_resp
 
     mock_resp = MagicMock()
     mock_resp.ok = True
@@ -183,6 +188,10 @@ def test_crossmint_create_payment_intent(mock_settings, mock_post):
     assert payload["payment"]["receiptEmail"] == "member@example.com"
     assert isinstance(payload["lineItems"], list)
     assert payload["lineItems"][0]["tokenLocator"] == mock_settings.crossmint_token_locator
+    # Wallet link should have been called before the order was created
+    assert mock_put.called
+    link_call_kwargs = mock_put.call_args.kwargs
+    assert link_call_kwargs["json"]["chain"] == "solana"
 
 
 @patch("src.services.payments.crossmint.settings")

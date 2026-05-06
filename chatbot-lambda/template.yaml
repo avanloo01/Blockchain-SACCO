@@ -30,8 +30,8 @@ Parameters:
     Description: Solana wallet address for the SACCO treasury recipient in Crossmint checkout
   CrossmintTokenLocator:
     Type: String
-    Default: "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-    Description: Crossmint token locator for the asset sold in the embedded checkout (chain:mintAddress)
+    Default: ""
+    Description: Crossmint token locator override (chain:mintAddress). Leave empty to let the app select the correct USDC token for the environment.
   SolanaRpcUrl:
     Type: String
     Default: "https://api.devnet.solana.com"

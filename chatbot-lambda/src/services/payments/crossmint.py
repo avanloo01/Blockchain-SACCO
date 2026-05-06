@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 _CROSSMINT_PROD_BASE = "https://www.crossmint.com"
 _CROSSMINT_STAGING_BASE = "https://staging.crossmint.com"
 
+# Crossmint API versions
+_ORDERS_API_VERSION = "2022-06-09"
+_WALLETS_API_VERSION = "2025-06-09"
+
 
 def _read_error_message(response: requests.Response) -> str:
     fallback = f"Crossmint API error: {response.status_code} {response.reason}"
@@ -82,6 +86,37 @@ class CrossmintProvider(PaymentProvider):
         params = urlencode({"orderId": order_id, "clientSecret": client_secret})
         return f"{base_url}/checkout/crossmint?{params}"
 
+    def _link_wallet(
+        self,
+        *,
+        user_email: str,
+        wallet_address: str,
+        chain: str,
+    ) -> None:
+        """Link an external wallet to a Crossmint user.
+
+        Required by the Crossmint Onramp API before creating an order for an
+        external (non-Crossmint) wallet.  Safe to call repeatedly for the same
+        user/wallet pair.
+        """
+        user_locator = quote(f"email:{user_email}", safe="")
+        wallet_encoded = quote(wallet_address, safe="")
+        url = (
+            f"{self._api_base()}/api/{_WALLETS_API_VERSION}"
+            f"/users/{user_locator}/linked-wallets/{wallet_encoded}"
+        )
+        try:
+            response = requests.put(
+                url,
+                headers=self._headers(),
+                json={"chain": chain},
+                timeout=15,
+            )
+            if not response.ok:
+                raise ValueError(_read_error_message(response))
+        except requests.RequestException as exc:
+            raise ValueError(f"Crossmint API error linking wallet: {exc}") from exc
+
     def create_payment_intent(
         self,
         amount_usd: float,
@@ -111,6 +146,13 @@ class CrossmintProvider(PaymentProvider):
         fee_usd = round(amount_usd * settings.service_fee_percent / 100.0, 2)
         net_pool = round(amount_usd - fee_usd, 2)
 
+        chain = token_locator.split(":", 1)[0] if ":" in token_locator else "solana"
+        self._link_wallet(
+            user_email=receipt_email,
+            wallet_address=treasury,
+            chain=chain,
+        )
+
         payload: dict[str, Any] = {
             "lineItems": [
                 {
@@ -132,7 +174,7 @@ class CrossmintProvider(PaymentProvider):
 
         try:
             response = requests.post(
-                f"{self._api_base()}/api/2022-06-09/orders",
+                f"{self._api_base()}/api/{_ORDERS_API_VERSION}/orders",
                 headers={**self._headers(), **extra_headers},
                 json=payload,
                 timeout=15,
@@ -183,7 +225,7 @@ class CrossmintProvider(PaymentProvider):
         order_id = quote(intent_id, safe="")
         try:
             response = requests.get(
-                f"{self._api_base()}/api/2022-06-09/orders/{order_id}",
+                f"{self._api_base()}/api/{_ORDERS_API_VERSION}/orders/{order_id}",
                 headers={
                     "accept": "application/json",
                     "x-api-key": api_key,

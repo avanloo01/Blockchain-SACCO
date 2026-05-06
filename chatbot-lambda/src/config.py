@@ -24,9 +24,8 @@ class Settings:
     solana_rpc_url: str = os.getenv("SOLANA_RPC_URL", "https://api.devnet.solana.com")
     crossmint_server_api_key: str = os.getenv("CROSSMINT_SERVER_API_KEY", "")
     crossmint_wallet_address: str = os.getenv("CROSSMINT_WALLET_ADDRESS", "") or os.getenv("SOLANA_TREASURY_ADDRESS", "")
-    crossmint_token_locator: str = os.getenv(
-        "CROSSMINT_TOKEN_LOCATOR",
-        _default_crossmint_token_locator(os.getenv("APP_ENV", "dev")),
+    crossmint_token_locator: str = os.getenv("CROSSMINT_TOKEN_LOCATOR") or _default_crossmint_token_locator(
+        os.getenv("APP_ENV", "dev")
     )
     crossmint_slippage_bps: str = os.getenv("CROSSMINT_SLIPPAGE_BPS", "500")
 
