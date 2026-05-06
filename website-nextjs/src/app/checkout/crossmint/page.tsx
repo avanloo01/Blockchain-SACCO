@@ -180,7 +180,7 @@ function CrossmintCheckoutContent() {
                       colors: {
                         backgroundPrimary: "#0a111d",
                         borderPrimary: "#2f3f57",
-                        textPrimary: "#f3f6ff",
+                        textPrimary: "#2f3f57",
                         textSecondary: "#a2b4cc",
                         accent: "#2dd4bf",
                         warning: "#f59e0b",
