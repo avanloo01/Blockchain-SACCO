@@ -179,7 +179,7 @@ def test_crossmint_create_payment_intent(mock_settings, mock_post):
     assert "clientSecret=client_secret_123" in intent.payment_url
     payload = mock_post.call_args.kwargs["json"]
     assert payload["recipient"]["walletAddress"] == "TreasuryWallet123"
-    assert payload["payment"]["method"] == "fiat"
+    assert payload["payment"]["method"] == "card"
     assert payload["payment"]["receiptEmail"] == "member@example.com"
     assert isinstance(payload["lineItems"], list)
     assert payload["lineItems"][0]["tokenLocator"] == mock_settings.crossmint_token_locator

@@ -123,7 +123,7 @@ class CrossmintProvider(PaymentProvider):
                 }
             ],
             "recipient": {"walletAddress": treasury},
-            "payment": {"method": "fiat", "receiptEmail": receipt_email},
+            "payment": {"method": "card", "receiptEmail": receipt_email},
         }
 
         extra_headers: dict[str, str] = {}
