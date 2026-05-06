@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
-export default function LoginVerifyPage() {
+function LoginVerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"verifying" | "error">("verifying");
@@ -54,5 +54,19 @@ export default function LoginVerifyPage() {
     <div style={{ maxWidth: 440, margin: "4rem auto", padding: "0 1.25rem" }}>
       <p style={{ color: "var(--foreground-muted)" }}>Signing you in…</p>
     </div>
+  );
+}
+
+export default function LoginVerifyPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ maxWidth: 440, margin: "4rem auto", padding: "0 1.25rem" }}>
+          <p style={{ color: "var(--foreground-muted)" }}>Signing you in…</p>
+        </div>
+      }
+    >
+      <LoginVerifyContent />
+    </Suspense>
   );
 }
