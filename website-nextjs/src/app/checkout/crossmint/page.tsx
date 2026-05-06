@@ -193,29 +193,29 @@ function CrossmintCheckoutContent() {
                       },
                       Label: {
                         colors: {
-                          text: "#a2b4cc",
+                          text: "#425066",
                         },
                       },
                       Input: {
                         borderRadius: "16px",
                         colors: {
-                          text: "#f3f6ff",
-                          background: "#0b1422",
-                          border: "#30425b",
+                          text: "#0f1726",
+                          background: "#ffffff",
+                          border: "#8fa3c3",
                           boxShadow: "none",
-                          placeholder: "#7f90a8",
+                          placeholder: "#5f6f86",
                         },
                         focus: {
                           colors: {
-                            background: "#0d1627",
+                            background: "#ffffff",
                             border: "#2dd4bf",
-                            boxShadow: "0 0 0 1px #2dd4bf",
+                            boxShadow: "0 0 0 2px rgba(45, 212, 191, 0.35)",
                           },
                         },
                         hover: {
                           colors: {
-                            background: "#0d1627",
-                            border: "#3b5070",
+                            background: "#f8fbff",
+                            border: "#6f86a8",
                             boxShadow: "none",
                           },
                         },
@@ -223,24 +223,24 @@ function CrossmintCheckoutContent() {
                       Tab: {
                         borderRadius: "16px",
                         colors: {
-                          text: "#c7d3e7",
-                          background: "#0a1220",
-                          border: "#30425b",
+                          text: "#1a2436",
+                          background: "#eef3fa",
+                          border: "#90a3bf",
                           boxShadow: "none",
                         },
                         selected: {
                           colors: {
-                            text: "#f5faff",
-                            background: "#0d1d2a",
+                            text: "#0a1322",
+                            background: "#dff8f4",
                             border: "#2dd4bf",
-                            boxShadow: "0 0 0 1px #2dd4bf",
+                            boxShadow: "0 0 0 2px rgba(45, 212, 191, 0.28)",
                           },
                         },
                         hover: {
                           colors: {
-                            text: "#f0f6ff",
-                            background: "#0f1b2c",
-                            border: "#3b5070",
+                            text: "#0f1a2d",
+                            background: "#e6edf7",
+                            border: "#6f86a8",
                             boxShadow: "none",
                           },
                         },
@@ -248,12 +248,12 @@ function CrossmintCheckoutContent() {
                       PrimaryButton: {
                         borderRadius: "14px",
                         colors: {
-                          text: "#031520",
+                          text: "#052230",
                           background: "#2dd4bf",
                         },
                         hover: {
                           colors: {
-                            text: "#031520",
+                            text: "#052230",
                             background: "#4fe3d1",
                           },
                         },
