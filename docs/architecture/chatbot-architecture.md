@@ -14,7 +14,7 @@
 - Verifies source and routes command handlers.
 
 2. Lambda command handlers:
-- `/start`, `/profile`, `/contribute`, `/loan_request`, `/loan_status`, `/repay`.
+- `/start`, `/profile`, `/contribute`, `/loan`, `/loan_status`, `/repay`.
 
 3. EventBridge schedules:
 - Monthly billing cycle trigger.
@@ -46,7 +46,7 @@
 
 ## Command Flow Example: Loan Request
 
-1. Member sends `/loan_request` with amount and tenure.
+1. Member sends `/loan` with amount and tenure.
 2. Bot checks minimum membership age (>= 3 months).
 3. Risk service computes score and recommended limit.
 4. Policy engine validates pool utilization cap (total lent <= 60% of pool).

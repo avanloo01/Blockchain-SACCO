@@ -64,7 +64,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
         return (
             "Use /contribute 25 to start a USDC contribution.\n"
             f"Use {_verify_usage().replace('Usage: ', '')} to confirm a payment.\n"
-            "Use /loan_request 120 3 to request a 3-month loan.\n"
+            "Use /loan 120 3 to request a 3-month loan.\n"
             "Use /wallet <address> to save your Solana wallet for loan payouts.\n"
             "Use /proposals to list active governance proposals.\n"
             "Use /vote <loan_id> yes|no to cast your governance vote.\n"
@@ -204,11 +204,11 @@ def dispatch_command(chat_id: str, text: str) -> str:
         else:
             return f"Verification failed: {result.error or 'transaction error on-chain'}"
 
-    if command == "/loan_request":
+    if command == "/loan":
         amount_usd = _parse_positive_float(parts[1] if len(parts) > 1 else None, default=120.0)
         tenure_months = _parse_positive_int(parts[2] if len(parts) > 2 else None, default=3)
         if amount_usd <= 0 or tenure_months <= 0:
-            return "Invalid loan request. Example: /loan_request 120 3"
+            return "Invalid loan request. Example: /loan 120 3"
 
         member_months = get_member_months(member)
         pool = get_pool_state()
@@ -230,7 +230,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
                     f"You are eligible for a {amount_usd:.2f} USD loan over {tenure_months} months!\n"
                     f"Before I can send the funds, please share your Solana wallet address:\n"
                     f"/wallet <your_solana_address>\n\n"
-                    f"Then re-run: /loan_request {amount_usd:.0f} {tenure_months}"
+                    f"Then re-run: /loan {amount_usd:.0f} {tenure_months}"
                 )
             loan = create_loan_request(
                 member_id=member.id,
@@ -308,7 +308,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
             f"Current tally -> Yes: {tally['yes']} | No: {tally['no']} | Total: {tally['total']}"
         )
 
-    return "Unknown command. Supported: /start, /help, /status, /wallet, /contribute, /verify, /loan_request, /proposals, /vote."
+    return "Unknown command. Supported: /start, /help, /status, /wallet, /contribute, /verify, /loan, /proposals, /vote."
 
 
 def _parse_positive_float(value: str | None, default: float) -> float:

@@ -87,7 +87,7 @@ def test_contribute_with_amount_includes_fee_breakdown(mock_member, mock_provide
 def test_loan_request_vote_lane_above_threshold(mock_member, _mm, _ps, mock_create, _rs) -> None:
     mock_member.return_value = _fake_member(walletAddress="7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")
     mock_create.return_value = MagicMock(id="loan-1", amountUsd=101, tenureMonths=3, memberId="mem-001")
-    message = dispatch_command(chat_id="123", text="/loan_request 101 3")
+    message = dispatch_command(chat_id="123", text="/loan 101 3")
     assert "Lane: vote" in message
 
 
@@ -103,7 +103,7 @@ def test_loan_request_auto_lane_at_threshold(mock_member, _mm, _ps, mock_create,
     mock_member.return_value = _fake_member(walletAddress="7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")
     mock_create.return_value = MagicMock(id="loan-2", amountUsd=100, tenureMonths=3, memberId="mem-001")
     mock_disburse.return_value = DisburseResult(tx_signature="abc123txsig")
-    message = dispatch_command(chat_id="123", text="/loan_request 100 3")
+    message = dispatch_command(chat_id="123", text="/loan 100 3")
     assert "USDC sent to your wallet" in message
     mock_disburse.assert_called_once()
     _approve.assert_called_once()
@@ -115,7 +115,7 @@ def test_loan_request_auto_lane_at_threshold(mock_member, _mm, _ps, mock_create,
 @patch("src.handlers.commands.get_member_by_chat_id")
 def test_loan_request_auto_lane_no_wallet_prompts_wallet(mock_member, _mm, _ps, _create) -> None:
     mock_member.return_value = _fake_member(walletAddress=None)
-    message = dispatch_command(chat_id="123", text="/loan_request 100 3")
+    message = dispatch_command(chat_id="123", text="/loan 100 3")
     assert "/wallet" in message
     assert "wallet" in message.lower()
     _create.assert_not_called()

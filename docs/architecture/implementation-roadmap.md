@@ -14,7 +14,7 @@
 	- Pool utilization cap: 60%.
 	- Governance threshold: on-chain vote required above 100 USD.
 - [x] Complete Lambda deployment and webhook registration.
-- [x] Verify command loop in Telegram (`/start`, `/help`, `/contribute`, `/loan_request`, `/verify`, `/status`, `/proposals`, `/vote`).
+- [x] Verify command loop in Telegram (`/start`, `/help`, `/contribute`, `/loan`, `/verify`, `/status`, `/proposals`, `/vote`).
 - [x] Add webhook secret validation and deployment runbook.
 - [x] GitHub Actions CI/CD pipeline with all parameter overrides.
 
