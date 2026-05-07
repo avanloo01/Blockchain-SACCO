@@ -147,7 +147,6 @@ def test_crossmint_create_payment_intent(mock_settings, mock_post, mock_put):
     mock_settings.crossmint_server_api_key = "server_key_123"
     mock_settings.crossmint_wallet_address = "TreasuryWallet123"
     mock_settings.crossmint_token_locator = "solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-    mock_settings.crossmint_slippage_bps = 500
     mock_settings.website_url = "https://blockchainsacco.com"
     mock_settings.app_env = "dev"
 
@@ -188,7 +187,9 @@ def test_crossmint_create_payment_intent(mock_settings, mock_post, mock_put):
     assert payload["payment"]["receiptEmail"] == "member@example.com"
     assert isinstance(payload["lineItems"], list)
     assert payload["lineItems"][0]["tokenLocator"] == mock_settings.crossmint_token_locator
-    assert isinstance(payload["lineItems"][0]["executionParameters"]["slippageBps"], int)
+    assert payload["lineItems"][0]["executionParameters"]["mode"] == "exact-in"
+    assert payload["lineItems"][0]["executionParameters"]["amount"] == "25.00"
+    assert "slippageBps" not in payload["lineItems"][0]["executionParameters"]
     # Wallet link should have been called before the order was created
     assert mock_put.called
     link_call_kwargs = mock_put.call_args.kwargs
