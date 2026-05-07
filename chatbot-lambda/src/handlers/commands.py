@@ -9,13 +9,15 @@ from src.repositories.billing_repo import (
 )
 from src.repositories.governance_repo import cast_vote, get_vote_tally, list_open_vote_loans
 from src.repositories.loan_repo import (
+    approve_loan,
     create_loan_request,
     generate_repayment_schedule,
     get_pool_state,
 )
-from src.repositories.member_repo import add_contribution, get_member_by_chat_id, get_member_months
+from src.repositories.member_repo import add_contribution, get_member_by_chat_id, get_member_months, update_wallet_address
 from src.services.payments import get_payment_provider
 from src.services.payments.base import PaymentStatus
+from src.services.solana_disburse import disburse_usdc
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
             "Use /contribute 25 to start a USDC contribution.\n"
             f"Use {_verify_usage().replace('Usage: ', '')} to confirm a payment.\n"
             "Use /loan_request 120 3 to request a 3-month loan.\n"
+            "Use /wallet <address> to save your Solana wallet for loan payouts.\n"
             "Use /proposals to list active governance proposals.\n"
             "Use /vote <loan_id> yes|no to cast your governance vote.\n"
             "Use /status to view your membership summary."
@@ -75,12 +78,37 @@ def dispatch_command(chat_id: str, text: str) -> str:
 
     if command == "/status":
         months = get_member_months(member)
+        wallet = getattr(member, "walletAddress", None) or "not set"
         return (
             f"Member since: {member.joinedOn.strftime('%Y-%m-%d')}\n"
             f"Months active: {months}\n"
             f"Total contributed: {member.contributionTotalUsd:.2f} USD\n"
-            f"Repayment on-time ratio: {member.repaymentOnTimeRatio:.0%}"
+            f"Repayment on-time ratio: {member.repaymentOnTimeRatio:.0%}\n"
+            f"Wallet: {wallet}"
         )
+
+    if command == "/wallet":
+        if len(parts) < 2:
+            wallet = getattr(member, "walletAddress", None)
+            if wallet:
+                return f"Your current wallet: {wallet}\nTo update: /wallet <new_solana_address>"
+            return (
+                "No wallet address set.\n"
+                "Send your Solana wallet address so loans can be paid out to you:\n"
+                "/wallet <your_solana_address>"
+            )
+        raw_address = parts[1]
+        try:
+            from solders.pubkey import Pubkey  # noqa: PLC0415
+            Pubkey.from_string(raw_address)
+        except Exception:
+            return (
+                "That doesn't look like a valid Solana address.\n"
+                "Please send a base58 Solana wallet address.\n"
+                "Example: /wallet 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+            )
+        update_wallet_address(member.id, raw_address)
+        return f"Wallet saved: {raw_address}\nLoan disbursements will be sent here."
 
     if command == "/contribute":
         amount_usd = _parse_positive_float(parts[1] if len(parts) > 1 else None, default=20.0)
@@ -195,6 +223,52 @@ def dispatch_command(chat_id: str, text: str) -> str:
         if not decision["eligible"]:
             return f"Loan request declined: {decision['reason']}"
 
+        if decision["governance_lane"] == "auto":
+            wallet = getattr(member, "walletAddress", None)
+            if not wallet:
+                return (
+                    f"You are eligible for a {amount_usd:.2f} USD loan over {tenure_months} months!\n"
+                    f"Before I can send the funds, please share your Solana wallet address:\n"
+                    f"/wallet <your_solana_address>\n\n"
+                    f"Then re-run: /loan_request {amount_usd:.0f} {tenure_months}"
+                )
+            loan = create_loan_request(
+                member_id=member.id,
+                amount_usd=amount_usd,
+                tenure_months=tenure_months,
+                governance_lane=decision["governance_lane"],
+                reason=decision["reason"],
+            )
+            generate_repayment_schedule(loan)
+            token_locator = settings.crossmint_token_locator
+            mint_address = token_locator.split(":", 1)[1] if ":" in token_locator else token_locator
+            disburse_result = disburse_usdc(
+                recipient_wallet=wallet,
+                amount_usd=amount_usd,
+                mint_address=mint_address,
+            )
+            if disburse_result.error:
+                logger.error(
+                    "Loan disbursement failed loan_id=%s member=%s error=%s",
+                    loan.id,
+                    member.id,
+                    disburse_result.error,
+                )
+                return (
+                    f"Loan approved for {amount_usd:.2f} USD over {tenure_months} months, "
+                    f"but the on-chain transfer failed: {disburse_result.error}\n"
+                    f"Please contact support with loan ID: {loan.id[:8]}"
+                )
+            approve_loan(loan.id)
+            sig = disburse_result.tx_signature
+            sig_preview = f"{sig[:16]}..." if len(sig) > 16 else sig
+            return (
+                f"Loan approved and {amount_usd:.2f} USDC sent to your wallet!\n"
+                f"Transaction: {sig_preview}\n"
+                f"Repayments start in 30 days ({tenure_months} x {amount_usd / tenure_months:.2f} USD/month)."
+            )
+
+        # Governance lane — submitted for community vote, no immediate disbursement.
         loan = create_loan_request(
             member_id=member.id,
             amount_usd=amount_usd,
@@ -202,9 +276,6 @@ def dispatch_command(chat_id: str, text: str) -> str:
             governance_lane=decision["governance_lane"],
             reason=decision["reason"],
         )
-        if decision["governance_lane"] == "auto":
-            generate_repayment_schedule(loan)
-
         return (
             f"Loan request submitted for {amount_usd:.2f} USD over {tenure_months} months. "
             f"Lane: {decision['governance_lane']}. "
@@ -239,7 +310,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
             f"Current tally -> Yes: {tally['yes']} | No: {tally['no']} | Total: {tally['total']}"
         )
 
-    return "Unknown command. Supported: /start, /help, /status, /contribute, /verify, /loan_request, /proposals, /vote."
+    return "Unknown command. Supported: /start, /help, /status, /wallet, /contribute, /verify, /loan_request, /proposals, /vote."
 
 
 def _parse_positive_float(value: str | None, default: float) -> float:

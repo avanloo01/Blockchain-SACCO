@@ -134,3 +134,12 @@ def add_contribution_by_member_id(member_id: str, amount_usd: float) -> Member:
         where={"id": member_id},
         data={"contributionTotalUsd": {"increment": amount_usd}},
     )
+
+
+def update_wallet_address(member_id: str, wallet_address: str) -> Member:
+    """Persist a member's Solana wallet address."""
+    db = get_db()
+    return db.member.update(
+        where={"id": member_id},
+        data={"walletAddress": wallet_address},
+    )

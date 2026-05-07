@@ -85,31 +85,73 @@ def test_contribute_with_amount_includes_fee_breakdown(mock_member, mock_provide
 @patch("src.handlers.commands.get_member_months", return_value=4)
 @patch("src.handlers.commands.get_member_by_chat_id")
 def test_loan_request_vote_lane_above_threshold(mock_member, _mm, _ps, mock_create, _rs) -> None:
-    mock_member.return_value = _fake_member()
+    mock_member.return_value = _fake_member(walletAddress="7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")
     mock_create.return_value = MagicMock(id="loan-1", amountUsd=101, tenureMonths=3, memberId="mem-001")
     message = dispatch_command(chat_id="123", text="/loan_request 101 3")
     assert "Lane: vote" in message
 
 
+@patch("src.handlers.commands.approve_loan")
+@patch("src.handlers.commands.disburse_usdc")
 @patch("src.handlers.commands.generate_repayment_schedule")
 @patch("src.handlers.commands.create_loan_request")
 @patch("src.handlers.commands.get_pool_state", return_value={"total_balance_usd": 10000.0, "total_lent_out_usd": 5000.0})
 @patch("src.handlers.commands.get_member_months", return_value=4)
 @patch("src.handlers.commands.get_member_by_chat_id")
-def test_loan_request_auto_lane_at_threshold(mock_member, _mm, _ps, mock_create, _rs) -> None:
-    mock_member.return_value = _fake_member()
+def test_loan_request_auto_lane_at_threshold(mock_member, _mm, _ps, mock_create, _rs, mock_disburse, _approve) -> None:
+    from src.services.solana_disburse import DisburseResult
+    mock_member.return_value = _fake_member(walletAddress="7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")
     mock_create.return_value = MagicMock(id="loan-2", amountUsd=100, tenureMonths=3, memberId="mem-001")
+    mock_disburse.return_value = DisburseResult(tx_signature="abc123txsig")
     message = dispatch_command(chat_id="123", text="/loan_request 100 3")
-    assert "Lane: auto" in message
+    assert "USDC sent to your wallet" in message
+    mock_disburse.assert_called_once()
+    _approve.assert_called_once()
+
+
+@patch("src.handlers.commands.create_loan_request")
+@patch("src.handlers.commands.get_pool_state", return_value={"total_balance_usd": 10000.0, "total_lent_out_usd": 5000.0})
+@patch("src.handlers.commands.get_member_months", return_value=4)
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_loan_request_auto_lane_no_wallet_prompts_wallet(mock_member, _mm, _ps, _create) -> None:
+    mock_member.return_value = _fake_member(walletAddress=None)
+    message = dispatch_command(chat_id="123", text="/loan_request 100 3")
+    assert "/wallet" in message
+    assert "wallet" in message.lower()
+    _create.assert_not_called()
 
 
 @patch("src.handlers.commands.get_member_months", return_value=4)
 @patch("src.handlers.commands.get_member_by_chat_id")
 def test_status_command(mock_member, _mm) -> None:
-    mock_member.return_value = _fake_member(contributionTotalUsd=250.0)
+    mock_member.return_value = _fake_member(contributionTotalUsd=250.0, walletAddress=None)
     message = dispatch_command(chat_id="123", text="/status")
     assert "250.00 USD" in message
     assert "Months active:" in message
+    assert "Wallet:" in message
+
+
+@patch("src.handlers.commands.update_wallet_address")
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_wallet_command_saves_valid_address(mock_member, mock_update) -> None:
+    mock_member.return_value = _fake_member(walletAddress=None)
+    message = dispatch_command(chat_id="123", text="/wallet 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")
+    assert "saved" in message.lower() or "wallet" in message.lower()
+    mock_update.assert_called_once_with("mem-001", "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")
+
+
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_wallet_command_rejects_invalid_address(mock_member) -> None:
+    mock_member.return_value = _fake_member(walletAddress=None)
+    message = dispatch_command(chat_id="123", text="/wallet not-a-real-address")
+    assert "valid" in message.lower() or "invalid" in message.lower()
+
+
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_wallet_command_no_args_shows_prompt(mock_member) -> None:
+    mock_member.return_value = _fake_member(walletAddress=None)
+    message = dispatch_command(chat_id="123", text="/wallet")
+    assert "/wallet" in message
 
 
 @patch("src.handlers.commands.list_open_vote_loans")

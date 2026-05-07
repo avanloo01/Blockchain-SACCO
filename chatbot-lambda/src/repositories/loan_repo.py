@@ -79,6 +79,17 @@ def get_due_repayments(days_ahead: int = 3) -> list[dict[str, str]]:
     ]
 
 
+def approve_loan(loan_id: str) -> LoanRequestRow:
+    """Mark a loan request as approved."""
+    db = get_db()
+    loan = db.loanrequest.update(
+        where={"id": loan_id},
+        data={"status": "approved"},
+    )
+    logger.info("Loan approved id=%s", loan_id)
+    return loan
+
+
 def get_pool_state() -> dict[str, float]:
     """Compute aggregate pool balance from member contributions and outstanding loans."""
     db = get_db()

@@ -28,6 +28,7 @@ class Settings:
         os.getenv("APP_ENV", "dev")
     )
     crossmint_slippage_bps: int = int(os.getenv("CROSSMINT_SLIPPAGE_BPS", "500"))
+    solana_treasury_private_key: str = os.getenv("SOLANA_TREASURY_PRIVATE_KEY", "")
 
 
 settings = Settings()

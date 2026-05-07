@@ -41,6 +41,11 @@ Parameters:
     Default: ""
     NoEcho: true
     Description: Crossmint server-side API key for headless checkout and order reads
+  SolanaTreasuryPrivateKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: Base58-encoded 64-byte keypair for the SACCO treasury wallet (used for loan disbursement)
   WebsiteUrl:
     Type: String
     Default: "https://lemaiyanlabs.org"
@@ -69,6 +74,7 @@ Globals:
         CROSSMINT_WALLET_ADDRESS: !Ref CrossmintWalletAddress
         CROSSMINT_TOKEN_LOCATOR: !Ref CrossmintTokenLocator
         WEBSITE_URL: !Ref WebsiteUrl
+        SOLANA_TREASURY_PRIVATE_KEY: !Ref SolanaTreasuryPrivateKey
 
 Resources:
   TelegramWebhookFunction:
