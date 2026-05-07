@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Well-known Solana program IDs.
 _TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-_ASSOCIATED_TOKEN_PROGRAM_ID = Pubkey.from_string("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1bS")
+_ASSOCIATED_TOKEN_PROGRAM_ID = Pubkey.from_string("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
 _SYSTEM_PROGRAM_ID = Pubkey.from_string("11111111111111111111111111111111")
 
 # USDC has 6 decimal places.
