@@ -46,6 +46,10 @@ Parameters:
     Default: ""
     NoEcho: true
     Description: Base58-encoded 64-byte keypair for the SACCO treasury wallet (used for loan disbursement)
+  SolanaUsdcMint:
+    Type: String
+    Default: ""
+    Description: SPL token mint address for USDC used in loan disbursements. Leave empty to use the environment default.
   WebsiteUrl:
     Type: String
     Default: "https://lemaiyanlabs.org"
@@ -75,6 +79,7 @@ Globals:
         CROSSMINT_TOKEN_LOCATOR: !Ref CrossmintTokenLocator
         WEBSITE_URL: !Ref WebsiteUrl
         SOLANA_TREASURY_PRIVATE_KEY: !Ref SolanaTreasuryPrivateKey
+        SOLANA_USDC_MINT: !Ref SolanaUsdcMint
 
 Resources:
   TelegramWebhookFunction:

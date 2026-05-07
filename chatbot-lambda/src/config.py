@@ -8,6 +8,17 @@ def _default_crossmint_token_locator(app_env: str) -> str:
     return "solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 
 
+def _default_solana_usdc_mint(app_env: str) -> str:
+    """Mint address used when disbursing loans directly from the treasury wallet.
+
+    Prod: Circle's mainnet USDC.
+    Dev:  SPL Token Faucet USDC-Dev (https://spl-token-faucet.com/?token-name=USDC-Dev).
+    """
+    if app_env == "prod":
+        return "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    return "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
+
+
 @dataclass(frozen=True)
 class Settings:
     app_env: str = os.getenv("APP_ENV", "dev")
@@ -29,6 +40,9 @@ class Settings:
     )
     crossmint_slippage_bps: int = int(os.getenv("CROSSMINT_SLIPPAGE_BPS", "500"))
     solana_treasury_private_key: str = os.getenv("SOLANA_TREASURY_PRIVATE_KEY", "")
+    solana_usdc_mint: str = os.getenv("SOLANA_USDC_MINT") or _default_solana_usdc_mint(
+        os.getenv("APP_ENV", "dev")
+    )
 
 
 settings = Settings()

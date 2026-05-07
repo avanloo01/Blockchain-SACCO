@@ -125,6 +125,37 @@ def disburse_usdc(recipient_wallet: str, amount_usd: float, mint_address: str) -
         source_ata = _get_ata(treasury_pk, mint_pk)
         dest_ata = _get_ata(recipient_pk, mint_pk)
 
+        # Pre-flight: verify the treasury's source ATA exists and has sufficient balance.
+        bal_resp = _rpc(rpc_url, "getTokenAccountBalance", [str(source_ata)], call_id=2)
+        if "error" in bal_resp:
+            err_msg = bal_resp["error"].get("message", str(bal_resp["error"]))
+            logger.error(
+                "Treasury USDC account %s not found or invalid: %s", source_ata, err_msg
+            )
+            return DisburseResult(
+                tx_signature="",
+                error=(
+                    f"Treasury USDC account not found ({source_ata}). "
+                    "Fund the treasury wallet with USDC before disbursing loans."
+                ),
+            )
+        available_raw = int(bal_resp["result"]["value"]["amount"])
+        if available_raw < amount_raw:
+            available_usd = available_raw / (10**_USDC_DECIMALS)
+            logger.error(
+                "Treasury has insufficient USDC: need %.6f, have %.6f (source_ata=%s)",
+                amount_usd,
+                available_usd,
+                source_ata,
+            )
+            return DisburseResult(
+                tx_signature="",
+                error=(
+                    f"Treasury has insufficient USDC balance: "
+                    f"need {amount_usd:.2f}, available {available_usd:.2f}."
+                ),
+            )
+
         # Fetch the latest blockhash.
         bh_resp = _rpc(rpc_url, "getLatestBlockhash", [{"commitment": "confirmed"}])
         blockhash_str: str = bh_resp["result"]["value"]["blockhash"]

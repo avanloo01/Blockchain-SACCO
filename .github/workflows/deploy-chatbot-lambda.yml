@@ -94,6 +94,7 @@ jobs:
               PaymentProvider="crossmint" \
               SolanaTreasuryAddress="${{ secrets.SOLANA_TREASURY_ADDRESS }}" \
               SolanaTreasuryPrivateKey="${{ secrets.SOLANA_TREASURY_PRIVATE_KEY }}" \
+              SolanaUsdcMint="${{ secrets.SOLANA_USDC_MINT }}" \
               CrossmintWalletAddress="${{ secrets.CROSSMINT_WALLET_ADDRESS || secrets.SOLANA_TREASURY_ADDRESS }}" \
               CrossmintTokenLocator="${{ secrets.CROSSMINT_TOKEN_LOCATOR }}" \
               SolanaRpcUrl="${{ secrets.SOLANA_RPC_URL }}" \

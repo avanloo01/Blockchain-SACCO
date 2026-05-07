@@ -240,12 +240,10 @@ def dispatch_command(chat_id: str, text: str) -> str:
                 reason=decision["reason"],
             )
             generate_repayment_schedule(loan)
-            token_locator = settings.crossmint_token_locator
-            mint_address = token_locator.split(":", 1)[1] if ":" in token_locator else token_locator
             disburse_result = disburse_usdc(
                 recipient_wallet=wallet,
                 amount_usd=amount_usd,
-                mint_address=mint_address,
+                mint_address=settings.solana_usdc_mint,
             )
             if disburse_result.error:
                 logger.error(
