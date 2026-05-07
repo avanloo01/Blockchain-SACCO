@@ -305,6 +305,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
                 tenure_months=tenure_months,
                 governance_lane=decision["governance_lane"],
                 reason=decision["reason"],
+                interest_rate_apr=float(decision["interest_rate_apr"]),
             )
             generate_repayment_schedule(loan)
             disburse_result = disburse_usdc(
@@ -327,10 +328,17 @@ def dispatch_command(chat_id: str, text: str) -> str:
             approve_loan(loan.id)
             sig = disburse_result.tx_signature
             sig_preview = f"{sig[:16]}..." if len(sig) > 16 else sig
+            apr = float(decision["interest_rate_apr"])
+            r = apr / 100 / 12
+            if r == 0:
+                monthly = amount_usd / tenure_months
+            else:
+                monthly = amount_usd * r * (1 + r) ** tenure_months / ((1 + r) ** tenure_months - 1)
             return (
                 f"Loan approved and {amount_usd:.2f} USDC sent to your wallet!\n"
                 f"Transaction: {sig_preview}\n"
-                f"Repayments start in 30 days ({tenure_months} x {amount_usd / tenure_months:.2f} USD/month)."
+                f"Interest rate: {apr:.2f}% APR\n"
+                f"Repayments start in 30 days ({tenure_months} x {monthly:.2f} USD/month)."
             )
 
         # Governance lane — submitted for community vote, no immediate disbursement.
@@ -340,6 +348,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
             tenure_months=tenure_months,
             governance_lane=decision["governance_lane"],
             reason=decision["reason"],
+            interest_rate_apr=float(decision["interest_rate_apr"]),
         )
         return (
             f"Loan request submitted for {amount_usd:.2f} USD over {tenure_months} months. "

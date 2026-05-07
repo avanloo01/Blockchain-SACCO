@@ -61,13 +61,14 @@ model BillingIntent {
 }
 
 model LoanRequest {
-  id             String   @id @default(uuid())
-  memberId       String   @map("member_id")
-  amountUsd      Float    @map("amount_usd")
-  tenureMonths   Int      @map("tenure_months")
-  governanceLane String   @map("governance_lane")
-  status         String   @default("pending")
-  reason         String?
+  id                String   @id @default(uuid())
+  memberId          String   @map("member_id")
+  amountUsd         Float    @map("amount_usd")
+  tenureMonths      Int      @map("tenure_months")
+  interestRateApr   Float    @default(0) @map("interest_rate_apr")
+  governanceLane    String   @map("governance_lane")
+  status            String   @default("pending")
+  reason            String?
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

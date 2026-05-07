@@ -20,6 +20,7 @@ def create_loan_request(
     tenure_months: int,
     governance_lane: str,
     reason: str,
+    interest_rate_apr: float = 0.0,
 ) -> LoanRequestRow:
     db = get_db()
     loan = db.loanrequest.create(
@@ -27,20 +28,27 @@ def create_loan_request(
             "memberId": member_id,
             "amountUsd": amount_usd,
             "tenureMonths": tenure_months,
+            "interestRateApr": interest_rate_apr,
             "governanceLane": governance_lane,
             "reason": reason,
         }
     )
-    logger.info("Loan request created id=%s member=%s amount=%.2f", loan.id, member_id, amount_usd)
+    logger.info("Loan request created id=%s member=%s amount=%.2f apr=%.2f", loan.id, member_id, amount_usd, interest_rate_apr)
     return loan
 
 
 def generate_repayment_schedule(loan: LoanRequestRow) -> list[RepaymentSchedule]:
-    """Create equal monthly repayment rows for an approved loan."""
+    """Create equal monthly repayment rows for an approved loan using standard amortization."""
     db = get_db()
-    monthly = round(loan.amountUsd / loan.tenureMonths, 2)
+    apr = getattr(loan, "interestRateApr", 0.0) or 0.0
+    r = apr / 100 / 12  # monthly interest rate
+    n = loan.tenureMonths
+    if r == 0:
+        monthly = round(loan.amountUsd / n, 2)
+    else:
+        monthly = round(loan.amountUsd * r * (1 + r) ** n / ((1 + r) ** n - 1), 2)
     schedules: list[RepaymentSchedule] = []
-    for i in range(1, loan.tenureMonths + 1):
+    for i in range(1, n + 1):
         due = datetime.now(timezone.utc) + timedelta(days=30 * i)
         row = db.repaymentschedule.create(
             data={
