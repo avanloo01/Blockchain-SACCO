@@ -13,6 +13,8 @@ from src.repositories.loan_repo import (
     create_loan_request,
     generate_repayment_schedule,
     get_pool_state,
+    get_pending_repayment_for_member,
+    mark_repayment_paid,
 )
 from src.repositories.member_repo import add_contribution, get_member_by_chat_id, get_member_months, update_wallet_address
 from src.services.payments import get_payment_provider
@@ -65,6 +67,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
             "Use /contribute 25 to start a USDC contribution.\n"
             f"Use {_verify_usage().replace('Usage: ', '')} to confirm a payment.\n"
             "Use /loan 120 3 to request a 3-month loan.\n"
+            "Use /repay <repayment_id> to get a repayment payment link.\n"
             "Use /wallet <address> to save your Solana wallet for loan payouts.\n"
             "Use /proposals to list active governance proposals.\n"
             "Use /vote <loan_id> yes|no to cast your governance vote.\n"
@@ -186,14 +189,22 @@ def dispatch_command(chat_id: str, text: str) -> str:
                 intent_id=billing.id,
                 tx_signature=confirmation_reference,
             )
-            add_contribution(
-                telegram_chat_id=chat_id,
-                amount_usd=billing.netPoolAmountUsd,
-            )
             preview = (
                 f"{confirmation_reference[:16]}..."
                 if len(confirmation_reference) > 16
                 else confirmation_reference
+            )
+            repayment_id = _extract_repayment_id(billing)
+            if repayment_id:
+                mark_repayment_paid(repayment_id)
+                return (
+                    f"Repayment confirmed! Reference: {preview}\n"
+                    f"Installment {repayment_id[:8]} marked as paid."
+                )
+
+            add_contribution(
+                telegram_chat_id=chat_id,
+                amount_usd=billing.netPoolAmountUsd,
             )
             return (
                 f"Payment confirmed! Reference: {preview}\n"
@@ -203,6 +214,62 @@ def dispatch_command(chat_id: str, text: str) -> str:
             return "Payment found but not yet finalized. Please try again in a minute."
         else:
             return f"Verification failed: {result.error or 'transaction error on-chain'}"
+
+    if command == "/repay":
+        if len(parts) < 2:
+            return "Usage: /repay <repayment_id>"
+
+        repayment_id = parts[1]
+        repayment = get_pending_repayment_for_member(
+            member_id=member.id,
+            repayment_id=repayment_id,
+        )
+        if repayment is None:
+            return "Repayment not found or already settled."
+
+        receipt_email = getattr(member, "email", None)
+        if not isinstance(receipt_email, str):
+            receipt_email = None
+
+        try:
+            provider = get_payment_provider()
+            intent = provider.create_payment_intent(
+                amount_usd=repayment.amountUsd,
+                member_id=member.id,
+                idempotency_key=f"repay:{repayment.id}",
+                receipt_email=receipt_email,
+            )
+        except Exception as exc:
+            logger.exception("Failed to create repayment intent for chat_id=%s", chat_id)
+            return f"Could not start repayment right now: {exc}"
+
+        create_billing_intent(
+            member_id=member.id,
+            amount_usd=intent.amount_usd,
+            service_fee_usd=intent.service_fee_usd,
+            net_pool_amount_usd=intent.net_pool_amount_usd,
+            idempotency_key=intent.intent_id,
+            recipient_address=intent.recipient_address,
+            # Store the repayment reference so /verify can settle the schedule row.
+            memo=f"repay:{repayment.id}",
+            payment_url=intent.payment_url,
+            network=intent.network,
+        )
+
+        lines = [
+            "Repayment intent created.",
+            f"Installment: {repayment.id[:8]}",
+            f"Amount due: {intent.amount_usd:.2f} USDC",
+            f"Due date: {repayment.dueOn.strftime('%Y-%m-%d')}",
+            f"Network: {intent.network}",
+            f"Send to: {intent.recipient_address}",
+        ]
+        if intent.memo:
+            lines.append(f"Memo: {intent.memo}")
+        if intent.payment_url:
+            lines.append(f"Payment link: {intent.payment_url}")
+        lines.append(_verify_follow_up(intent.intent_id))
+        return "\n".join(lines)
 
     if command == "/loan":
         amount_usd = _parse_positive_float(parts[1] if len(parts) > 1 else None, default=120.0)
@@ -308,7 +375,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
             f"Current tally -> Yes: {tally['yes']} | No: {tally['no']} | Total: {tally['total']}"
         )
 
-    return "Unknown command. Supported: /start, /help, /status, /wallet, /contribute, /verify, /loan, /proposals, /vote."
+    return "Unknown command. Supported: /start, /help, /status, /wallet, /contribute, /verify, /loan, /repay, /proposals, /vote."
 
 
 def _parse_positive_float(value: str | None, default: float) -> float:
@@ -327,3 +394,13 @@ def _parse_positive_int(value: str | None, default: int) -> int:
         return int(value)
     except ValueError:
         return -1
+
+
+def _extract_repayment_id(billing: object) -> str | None:
+    memo = getattr(billing, "memo", None)
+    if not isinstance(memo, str):
+        return None
+    if not memo.startswith("repay:"):
+        return None
+    repayment_id = memo.split(":", 1)[1].strip()
+    return repayment_id or None

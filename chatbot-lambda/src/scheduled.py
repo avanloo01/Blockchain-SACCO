@@ -68,6 +68,7 @@ def payment_reconciliation_handler(_event: dict[str, Any], _context: Any) -> dic
     but the transaction was still pending at verification time, as well as
     any intents that may have been missed.
     """
+    from src.repositories.loan_repo import mark_repayment_paid
     from src.repositories.member_repo import add_contribution_by_member_id
     from src.config import settings
     from src.services.payments import get_payment_provider
@@ -99,7 +100,12 @@ def payment_reconciliation_handler(_event: dict[str, Any], _context: Any) -> dic
                 tx_signature=result.tx_signature or verification_reference,
             )
             member = intent.member if intent.member else None
-            if member:
+            memo = intent.memo if isinstance(intent.memo, str) else ""
+            if memo.startswith("repay:"):
+                repayment_id = memo.split(":", 1)[1].strip()
+                if repayment_id:
+                    mark_repayment_paid(repayment_id)
+            elif member:
                 add_contribution_by_member_id(
                     member_id=member.id,
                     amount_usd=intent.netPoolAmountUsd,

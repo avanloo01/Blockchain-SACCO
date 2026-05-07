@@ -26,7 +26,10 @@ def build_repayment_messages() -> list[dict[str, str]]:
     messages = [
         {
             "member_id": r["member_id"],
-            "message": f"Reminder: your loan repayment of {r['amount_usd']} USD is due on {r['due_on']}.",
+            "message": (
+                f"Reminder: your loan repayment of {r['amount_usd']} USD is due on {r['due_on']}.\n"
+                f"Repay now: /repay {r['repayment_id']}"
+            ),
         }
         for r in due
     ]
