@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description:
     "Community savings and credit cooperative powered by Solana and USDC.",
   icons: {
-    icon: "/favicon.png",
+    icon: "/favicon.svg",
   },
 };
 
