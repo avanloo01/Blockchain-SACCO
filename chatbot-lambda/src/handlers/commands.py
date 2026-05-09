@@ -5,6 +5,7 @@ from src.policies.loan_policy import evaluate_loan_request
 from src.repositories.billing_repo import (
     create_billing_intent,
     get_billing_intent_by_idempotency_key,
+    get_billing_intent_by_memo,
     mark_billing_settled,
 )
 from src.repositories.governance_repo import cast_vote, get_vote_tally, list_open_vote_loans
@@ -220,6 +221,29 @@ def dispatch_command(chat_id: str, text: str) -> str:
         if repayment is None:
             return "No pending repayments found."
 
+        repayment_memo = f"repay:{repayment.id}"
+
+        # Re-use an existing pending billing intent for this repayment rather than
+        # creating a new Crossmint order.  Calling Crossmint's POST /orders with the
+        # same Idempotency-Key a second time causes Crossmint to treat the request as
+        # an order update, which is rejected for client-side auth keys:
+        # "Order X cannot be updated from client side auth."
+        existing_intent = get_billing_intent_by_memo(repayment_memo)
+        if existing_intent is not None:
+            lines = [
+                "Repayment intent created.",
+                f"Installment: {repayment.id[:8]}",
+                f"Amount due: {existing_intent.amountUsd:.2f} USDC",
+                f"Due date: {repayment.dueOn.strftime('%Y-%m-%d')}",
+                f"Network: {existing_intent.network}",
+            ]
+            if existing_intent.recipientAddress:
+                lines.append(f"Send to: {existing_intent.recipientAddress}")
+            if existing_intent.paymentUrl:
+                lines.append(f"Payment link: {existing_intent.paymentUrl}")
+            lines.append(_verify_follow_up(existing_intent.idempotencyKey))
+            return "\n".join(lines)
+
         receipt_email = getattr(member, "email", None)
         if not isinstance(receipt_email, str):
             receipt_email = None
@@ -229,7 +253,6 @@ def dispatch_command(chat_id: str, text: str) -> str:
             intent = provider.create_payment_intent(
                 amount_usd=repayment.amountUsd,
                 member_id=member.id,
-                idempotency_key=f"repay:{repayment.id}",
                 receipt_email=receipt_email,
             )
         except Exception as exc:
@@ -244,7 +267,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
             idempotency_key=intent.intent_id,
             recipient_address=intent.recipient_address,
             # Store the repayment reference so /verify can settle the schedule row.
-            memo=f"repay:{repayment.id}",
+            memo=repayment_memo,
             payment_url=intent.payment_url,
             network=intent.network,
         )

@@ -263,11 +263,13 @@ def test_crossmint_contribute_shows_single_arg_verify(
 
 @patch("src.handlers.commands.create_billing_intent")
 @patch("src.handlers.commands.get_payment_provider")
+@patch("src.handlers.commands.get_billing_intent_by_memo")
 @patch("src.handlers.commands.get_pending_repayment_for_member")
 @patch("src.handlers.commands.get_member_by_chat_id")
 def test_repay_command_creates_intent(
     mock_member,
     mock_repayment,
+    mock_existing_intent,
     mock_provider,
     mock_billing,
 ) -> None:
@@ -279,6 +281,7 @@ def test_repay_command_creates_intent(
         amountUsd=40.0,
         dueOn=datetime(2026, 6, 1, tzinfo=timezone.utc),
     )
+    mock_existing_intent.return_value = None  # No existing intent → create a new one
     mock_provider.return_value.create_payment_intent.return_value = PaymentIntent(
         intent_id="repay:repay-123",
         member_id="mem-001",
@@ -298,13 +301,44 @@ def test_repay_command_creates_intent(
     assert "Repayment intent created" in message
     assert "Amount due: 40.00 USDC" in message
     assert "Payment link:" in message
+    mock_existing_intent.assert_called_once_with("repay:repay-123")
     mock_provider.return_value.create_payment_intent.assert_called_once_with(
         amount_usd=40.0,
         member_id="mem-001",
-        idempotency_key="repay:repay-123",
         receipt_email="member@example.com",
     )
     assert mock_billing.called
+
+
+@patch("src.handlers.commands.get_pending_repayment_for_member")
+@patch("src.handlers.commands.get_billing_intent_by_memo")
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_repay_command_reuses_existing_intent(
+    mock_member,
+    mock_existing_intent,
+    mock_repayment,
+) -> None:
+    mock_member.return_value = _fake_member(id="mem-001")
+    mock_repayment.return_value = MagicMock(
+        id="repay-123",
+        amountUsd=40.0,
+        dueOn=datetime(2026, 6, 1, tzinfo=timezone.utc),
+    )
+    mock_existing_intent.return_value = MagicMock(
+        amountUsd=40.0,
+        network="solana_devnet",
+        recipientAddress="TreasuryABC",
+        paymentUrl="https://example.com/checkout/crossmint?orderId=order-abc",
+        idempotencyKey="order-abc",
+        status="pending",
+    )
+
+    message = dispatch_command(chat_id="123", text="/repay")
+
+    assert "Repayment intent created" in message
+    assert "Amount due: 40.00 USDC" in message
+    assert "Payment link:" in message
+    assert "order-abc" in message
 
 
 @patch("src.handlers.commands.mark_repayment_paid")

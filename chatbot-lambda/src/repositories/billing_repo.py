@@ -84,6 +84,15 @@ def get_billing_intent_by_idempotency_key(key: str) -> BillingIntent | None:
     return db.billingintent.find_unique(where={"idempotencyKey": key})
 
 
+def get_billing_intent_by_memo(memo: str) -> BillingIntent | None:
+    """Return the most recent pending billing intent with the given memo value."""
+    db = get_db()
+    return db.billingintent.find_first(
+        where={"memo": memo, "status": "pending"},
+        order={"createdAt": "desc"},
+    )
+
+
 def link_crossmint_order_id(idempotency_key: str, crossmint_order_id: str) -> bool:
     """Store the live Crossmint orderId in the memo column so /verify can look it up.
 
