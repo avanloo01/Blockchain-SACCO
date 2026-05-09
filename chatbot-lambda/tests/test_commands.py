@@ -293,7 +293,7 @@ def test_repay_command_creates_intent(
         payment_url="solana:TreasuryABC?amount=40",
     )
 
-    message = dispatch_command(chat_id="123", text="/repay repay-123")
+    message = dispatch_command(chat_id="123", text="/repay")
 
     assert "Repayment intent created" in message
     assert "Amount due: 40.00 USDC" in message
