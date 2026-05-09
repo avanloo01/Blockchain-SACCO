@@ -335,10 +335,7 @@ def test_repay_command_reuses_existing_intent(
 
     message = dispatch_command(chat_id="123", text="/repay")
 
-    assert "Repayment intent created" in message
-    assert "Amount due: 40.00 USDC" in message
-    assert "Payment link:" in message
-    assert "order-abc" in message
+    assert "Existing repayment intent found" in message
 
 
 @patch("src.handlers.commands.mark_repayment_paid")

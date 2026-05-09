@@ -231,7 +231,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
         existing_intent = get_billing_intent_by_memo(repayment_memo)
         if existing_intent is not None:
             lines = [
-                "Repayment intent created.",
+                "Existing repayment intent found.",
                 f"Installment: {repayment.id[:8]}",
                 f"Amount due: {existing_intent.amountUsd:.2f} USDC",
                 f"Due date: {repayment.dueOn.strftime('%Y-%m-%d')}",
