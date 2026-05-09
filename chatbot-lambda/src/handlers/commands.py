@@ -230,6 +230,46 @@ def dispatch_command(chat_id: str, text: str) -> str:
         # "Order X cannot be updated from client side auth."
         existing_intent = get_billing_intent_by_memo(repayment_memo)
         if existing_intent is not None:
+            # For Crossmint, auto-verify if the order was already completed on
+            # Crossmint's side but the user skipped /verify (so it is still
+            # "pending" in our DB).  This prevents the same stale link from
+            # being returned on subsequent /repay calls after a successful payment.
+            if settings.payment_provider == "crossmint":
+                try:
+                    provider = get_payment_provider()
+                    order_ref = existing_intent.idempotencyKey or existing_intent.id
+                    # For Crossmint, intent_id IS the orderId; tx_signature is
+                    # unused by the Crossmint adapter (it polls the Orders API).
+                    result = provider.verify_payment_settlement(
+                        intent_id=order_ref,
+                        tx_signature=order_ref,
+                    )
+                    if result.status == PaymentStatus.CONFIRMED:
+                        confirmation_ref = (
+                            result.tx_signature
+                            or existing_intent.idempotencyKey
+                            or existing_intent.id
+                        )
+                        mark_billing_settled(
+                            intent_id=existing_intent.id,
+                            tx_signature=confirmation_ref,
+                        )
+                        mark_repayment_paid(repayment.id)
+                        repayment = get_pending_repayment_for_member(member_id=member.id)
+                        if repayment is None:
+                            return (
+                                "Previous repayment confirmed automatically!\n"
+                                "No more pending repayments found."
+                            )
+                        repayment_memo = f"repay:{repayment.id}"
+                        existing_intent = None  # fall through to create a new intent
+                except Exception:
+                    logger.exception(
+                        "Auto-verify check failed for existing repayment intent %s; returning cached link",
+                        existing_intent.id,
+                    )
+
+        if existing_intent is not None:
             lines = [
                 "Existing repayment intent found.",
                 f"Installment: {repayment.id[:8]}",
