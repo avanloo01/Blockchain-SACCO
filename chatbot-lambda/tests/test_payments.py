@@ -149,6 +149,7 @@ def test_crossmint_create_payment_intent(mock_settings, mock_post, mock_put):
     mock_settings.crossmint_token_locator = "solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
     mock_settings.website_url = "https://blockchainsacco.com"
     mock_settings.app_env = "dev"
+    mock_settings.crossmint_admin_email = "admin@sacco.com"
 
     mock_link_resp = MagicMock()
     mock_link_resp.ok = True
@@ -190,10 +191,48 @@ def test_crossmint_create_payment_intent(mock_settings, mock_post, mock_put):
     assert payload["lineItems"][0]["executionParameters"]["mode"] == "exact-in"
     assert payload["lineItems"][0]["executionParameters"]["amount"] == "25.00"
     assert "slippageBps" not in payload["lineItems"][0]["executionParameters"]
-    # Wallet link should have been called before the order was created
+    # Wallet link should have been called with the stable admin email, not the member's email
     assert mock_put.called
     link_call_kwargs = mock_put.call_args.kwargs
     assert link_call_kwargs["json"]["chain"] == "solana"
+    assert "admin%40sacco.com" in mock_put.call_args.args[0]
+
+
+@patch("src.services.payments.crossmint.requests.put")
+@patch("src.services.payments.crossmint.requests.post")
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_link_wallet_falls_back_to_member_email(mock_settings, mock_post, mock_put):
+    """When CROSSMINT_ADMIN_EMAIL is not configured, fall back to the member's email."""
+    mock_settings.service_fee_percent = 1.0
+    mock_settings.crossmint_server_api_key = "server_key_123"
+    mock_settings.crossmint_wallet_address = "TreasuryWallet123"
+    mock_settings.crossmint_token_locator = "solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+    mock_settings.website_url = "https://blockchainsacco.com"
+    mock_settings.app_env = "dev"
+    mock_settings.crossmint_admin_email = ""  # not configured
+
+    mock_link_resp = MagicMock()
+    mock_link_resp.ok = True
+    mock_put.return_value = mock_link_resp
+
+    mock_resp = MagicMock()
+    mock_resp.ok = True
+    mock_resp.json.return_value = {
+        "clientSecret": "client_secret_123",
+        "order": {"orderId": "order-123"},
+    }
+    mock_post.return_value = mock_resp
+
+    provider = CrossmintProvider()
+    provider.create_payment_intent(
+        amount_usd=25.0,
+        member_id="chat-42",
+        receipt_email="member@example.com",
+    )
+
+    # Falls back to the member's email when admin email is not configured
+    assert mock_put.called
+    assert "member%40example.com" in mock_put.call_args.args[0]
 
 
 @patch("src.services.payments.crossmint.settings")

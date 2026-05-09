@@ -34,6 +34,7 @@ class Settings:
     solana_treasury_address: str = os.getenv("SOLANA_TREASURY_ADDRESS", "")
     solana_rpc_url: str = os.getenv("SOLANA_RPC_URL", "https://api.devnet.solana.com")
     crossmint_server_api_key: str = os.getenv("CROSSMINT_SERVER_API_KEY", "")
+    crossmint_admin_email: str = os.getenv("CROSSMINT_ADMIN_EMAIL", "")
     crossmint_wallet_address: str = os.getenv("CROSSMINT_WALLET_ADDRESS", "") or os.getenv("SOLANA_TREASURY_ADDRESS", "")
     crossmint_token_locator: str = os.getenv("CROSSMINT_TOKEN_LOCATOR") or _default_crossmint_token_locator(
         os.getenv("APP_ENV", "dev")

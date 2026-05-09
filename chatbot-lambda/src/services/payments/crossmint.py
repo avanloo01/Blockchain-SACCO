@@ -159,8 +159,15 @@ class CrossmintProvider(PaymentProvider):
         # be fulfilled.  The recipient.walletAddress field in the order payload
         # is what Crossmint uses to route funds; the link step is only needed
         # the very first time Crossmint sees an external wallet.
+        #
+        # Use the stable SACCO admin email (CROSSMINT_ADMIN_EMAIL) so the
+        # treasury wallet is always associated with the same Crossmint user.
+        # Linking it to each individual member's email would cause Crossmint to
+        # flag subsequent orders (where the recipient wallet appears to belong to
+        # a *different* user than the payer) and can result in payment failures.
+        link_email = settings.crossmint_admin_email or receipt_email
         self._link_wallet(
-            user_email=receipt_email,
+            user_email=link_email,
             wallet_address=treasury,
             chain=chain,
         )
