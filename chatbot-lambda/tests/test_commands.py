@@ -432,7 +432,7 @@ def test_repay_command_auto_verifies_completed_crossmint_order(
     mock_mark_repayment.assert_called_once_with("repay-111")
     # The response should be for the NEW installment, not the stale one
     assert "Repayment intent created" in message
-    assert "repay-22" in message  # first 8 chars of "repay-222"
+    assert "repay-22" in message  # id[:8] of "repay-222" → "repay-22"
 
 
 @patch("src.handlers.commands.mark_repayment_paid")

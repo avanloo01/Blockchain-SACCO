@@ -237,9 +237,12 @@ def dispatch_command(chat_id: str, text: str) -> str:
             if settings.payment_provider == "crossmint":
                 try:
                     provider = get_payment_provider()
+                    order_ref = existing_intent.idempotencyKey or existing_intent.id
+                    # For Crossmint, intent_id IS the orderId; tx_signature is
+                    # unused by the Crossmint adapter (it polls the Orders API).
                     result = provider.verify_payment_settlement(
-                        intent_id=existing_intent.idempotencyKey or existing_intent.id,
-                        tx_signature=existing_intent.idempotencyKey or existing_intent.id,
+                        intent_id=order_ref,
+                        tx_signature=order_ref,
                     )
                     if result.status == PaymentStatus.CONFIRMED:
                         confirmation_ref = (
