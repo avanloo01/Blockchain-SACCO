@@ -67,7 +67,7 @@ def dispatch_command(chat_id: str, text: str) -> str:
             "Use /contribute 25 to start a USDC contribution.\n"
             f"Use {_verify_usage().replace('Usage: ', '')} to confirm a payment.\n"
             "Use /loan 120 3 to request a 3-month loan.\n"
-            "Use /repay <repayment_id> to get a repayment payment link.\n"
+            "Use /repay to get a payment link for your next due installment.\n"
             "Use /wallet <address> to save your Solana wallet for loan payouts.\n"
             "Use /proposals to list active governance proposals.\n"
             "Use /vote <loan_id> yes|no to cast your governance vote.\n"
@@ -216,16 +216,9 @@ def dispatch_command(chat_id: str, text: str) -> str:
             return f"Verification failed: {result.error or 'transaction error on-chain'}"
 
     if command == "/repay":
-        if len(parts) < 2:
-            return "Usage: /repay <repayment_id>"
-
-        repayment_id = parts[1]
-        repayment = get_pending_repayment_for_member(
-            member_id=member.id,
-            repayment_id=repayment_id,
-        )
+        repayment = get_pending_repayment_for_member(member_id=member.id)
         if repayment is None:
-            return "Repayment not found or already settled."
+            return "No pending repayments found."
 
         receipt_email = getattr(member, "email", None)
         if not isinstance(receipt_email, str):

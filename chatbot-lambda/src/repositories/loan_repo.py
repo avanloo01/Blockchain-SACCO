@@ -87,15 +87,15 @@ def get_due_repayments(days_ahead: int = 3) -> list[dict[str, str]]:
     ]
 
 
-def get_pending_repayment_for_member(member_id: str, repayment_id: str) -> RepaymentSchedule | None:
-    """Fetch a member repayment row that is still pending."""
+def get_pending_repayment_for_member(member_id: str) -> RepaymentSchedule | None:
+    """Fetch the earliest pending repayment row for a member."""
     db = get_db()
     return db.repaymentschedule.find_first(
         where={
-            "id": repayment_id,
             "memberId": member_id,
             "status": "pending",
-        }
+        },
+        order={"dueOn": "asc"},
     )
 
 
