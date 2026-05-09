@@ -310,6 +310,8 @@ def test_repay_command_creates_intent(
     assert mock_billing.called
 
 
+@patch("src.handlers.commands.settings")
+@patch("src.handlers.commands.get_payment_provider")
 @patch("src.handlers.commands.get_pending_repayment_for_member")
 @patch("src.handlers.commands.get_billing_intent_by_memo")
 @patch("src.handlers.commands.get_member_by_chat_id")
@@ -317,14 +319,20 @@ def test_repay_command_reuses_existing_intent(
     mock_member,
     mock_existing_intent,
     mock_repayment,
+    mock_provider,
+    mock_settings,
 ) -> None:
+    from src.services.payments.base import PaymentStatus, SettlementResult
+
+    mock_settings.payment_provider = "crossmint"
     mock_member.return_value = _fake_member(id="mem-001")
     mock_repayment.return_value = MagicMock(
         id="repay-123",
         amountUsd=40.0,
         dueOn=datetime(2026, 6, 1, tzinfo=timezone.utc),
     )
-    mock_existing_intent.return_value = MagicMock(
+    existing = MagicMock(
+        id="bill-abc",
         amountUsd=40.0,
         network="solana_devnet",
         recipientAddress="TreasuryABC",
@@ -332,10 +340,99 @@ def test_repay_command_reuses_existing_intent(
         idempotencyKey="order-abc",
         status="pending",
     )
+    mock_existing_intent.return_value = existing
+    # Crossmint order still pending — should return the existing link
+    mock_provider.return_value.verify_payment_settlement.return_value = SettlementResult(
+        intent_id="order-abc",
+        status=PaymentStatus.PENDING,
+        tx_signature=None,
+    )
 
     message = dispatch_command(chat_id="123", text="/repay")
 
     assert "Existing repayment intent found" in message
+
+
+@patch("src.handlers.commands.mark_repayment_paid")
+@patch("src.handlers.commands.mark_billing_settled")
+@patch("src.handlers.commands.settings")
+@patch("src.handlers.commands.get_payment_provider")
+@patch("src.handlers.commands.get_pending_repayment_for_member")
+@patch("src.handlers.commands.get_billing_intent_by_memo")
+@patch("src.handlers.commands.create_billing_intent")
+@patch("src.handlers.commands.get_member_by_chat_id")
+def test_repay_command_auto_verifies_completed_crossmint_order(
+    mock_member,
+    _mock_create_billing,
+    mock_existing_intent,
+    mock_repayment,
+    mock_provider,
+    mock_settings,
+    mock_mark_settled,
+    mock_mark_repayment,
+) -> None:
+    """When a Crossmint order is already paid but /verify was never called,
+    /repay should settle the old intent automatically and return a link for
+    the next installment instead of the stale 'order successful' URL."""
+    from src.services.payments.base import PaymentIntent, PaymentStatus, SettlementResult
+
+    mock_settings.payment_provider = "crossmint"
+    mock_member.return_value = _fake_member(id="mem-001")
+
+    inst1 = MagicMock(
+        id="repay-111",
+        amountUsd=40.0,
+        dueOn=datetime(2026, 6, 1, tzinfo=timezone.utc),
+    )
+    inst2 = MagicMock(
+        id="repay-222",
+        amountUsd=40.0,
+        dueOn=datetime(2026, 7, 1, tzinfo=timezone.utc),
+    )
+    # First call returns installment 1 (old); after auto-settle returns installment 2
+    mock_repayment.side_effect = [inst1, inst2]
+
+    existing = MagicMock(
+        id="bill-abc",
+        amountUsd=40.0,
+        network="solana_devnet",
+        recipientAddress="TreasuryABC",
+        paymentUrl="https://example.com/checkout/crossmint?orderId=order-abc",
+        idempotencyKey="order-abc",
+        status="pending",
+    )
+    # First call finds the stale intent; second call (for the new installment) returns None
+    mock_existing_intent.side_effect = [existing, None]
+
+    # Crossmint reports the order as already completed
+    mock_provider.return_value.verify_payment_settlement.return_value = SettlementResult(
+        intent_id="order-abc",
+        status=PaymentStatus.CONFIRMED,
+        tx_signature="tx-confirmed",
+    )
+    mock_provider.return_value.create_payment_intent.return_value = PaymentIntent(
+        intent_id="order-new",
+        member_id="mem-001",
+        amount_usd=40.0,
+        service_fee_usd=0.4,
+        net_pool_amount_usd=39.6,
+        asset="USDC",
+        network="solana_devnet",
+        status=PaymentStatus.PENDING,
+        recipient_address="TreasuryABC",
+        memo=None,
+        payment_url="https://example.com/checkout/crossmint?orderId=order-new",
+    )
+
+    message = dispatch_command(chat_id="123", text="/repay")
+
+    # The old billing intent should have been settled automatically
+    mock_mark_settled.assert_called_once_with(intent_id="bill-abc", tx_signature="tx-confirmed")
+    # The old repayment row should be marked paid
+    mock_mark_repayment.assert_called_once_with("repay-111")
+    # The response should be for the NEW installment, not the stale one
+    assert "Repayment intent created" in message
+    assert "repay-22" in message  # first 8 chars of "repay-222"
 
 
 @patch("src.handlers.commands.mark_repayment_paid")
