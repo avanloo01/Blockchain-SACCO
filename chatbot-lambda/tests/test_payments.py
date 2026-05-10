@@ -318,7 +318,8 @@ def test_crossmint_link_wallet_409_linked_to_wrong_user(
         assert "Crossmint dashboard" in str(exc)
 
 
-
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_create_intent_raises_without_server_key(mock_settings):
     mock_settings.crossmint_server_api_key = ""
     mock_settings.crossmint_wallet_address = "TreasuryWallet123"
     mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
