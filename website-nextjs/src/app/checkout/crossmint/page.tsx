@@ -156,7 +156,7 @@ function CrossmintCheckoutContent() {
                       },
                     },
                     crypto: {
-                      enabled: false,
+                      enabled: true,
                     },
                     defaultMethod: "fiat",
                   }}
