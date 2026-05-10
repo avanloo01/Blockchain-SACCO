@@ -41,6 +41,10 @@ Parameters:
     Default: ""
     NoEcho: true
     Description: Crossmint server-side API key for headless checkout and order reads
+  CrossmintTreasuryEmail:
+    Type: String
+    Default: ""
+    Description: Email of the SACCO Crossmint account that owns the treasury wallet. Used to link the treasury wallet to the correct account (not the member's email) so payments are not rejected as self-payments.
   SolanaTreasuryPrivateKey:
     Type: String
     Default: ""
@@ -76,6 +80,7 @@ Globals:
         PRISMA_QUERY_ENGINE_BINARY: /var/task/prisma-query-engine-rhel-openssl-3.0.x
         CROSSMINT_SERVER_API_KEY: !Ref CrossmintServerApiKey
         CROSSMINT_WALLET_ADDRESS: !Ref CrossmintWalletAddress
+        CROSSMINT_TREASURY_EMAIL: !Ref CrossmintTreasuryEmail
         CROSSMINT_TOKEN_LOCATOR: !Ref CrossmintTokenLocator
         WEBSITE_URL: !Ref WebsiteUrl
         SOLANA_TREASURY_PRIVATE_KEY: !Ref SolanaTreasuryPrivateKey

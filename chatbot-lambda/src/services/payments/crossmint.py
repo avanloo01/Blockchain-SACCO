@@ -95,9 +95,12 @@ class CrossmintProvider(PaymentProvider):
     ) -> None:
         """Link an external wallet to a Crossmint user.
 
-        Required by the Crossmint Onramp API before creating an order for an
-        external (non-Crossmint) wallet.  Safe to call repeatedly for the same
-        user/wallet pair.
+        The treasury wallet must be linked to the SACCO's Crossmint account
+        (CROSSMINT_TREASURY_EMAIL), not to individual members.  Calling this
+        with the wrong email causes Crossmint to treat the payment as a
+        self-payment and return 400.
+
+        Safe to call repeatedly for the same user/wallet pair.
         """
         user_locator = quote(f"email:{user_email}", safe="")
         wallet_encoded = quote(wallet_address, safe="")
@@ -123,6 +126,36 @@ class CrossmintProvider(PaymentProvider):
                 raise ValueError(_read_error_message(response))
         except requests.RequestException as exc:
             raise ValueError(f"Crossmint API error linking wallet: {exc}") from exc
+
+    def _unlink_wallet_from_user(
+        self,
+        *,
+        user_email: str,
+        wallet_address: str,
+    ) -> None:
+        """Remove a linked-wallet association from a Crossmint user (best-effort).
+
+        Used to clean up cases where the treasury wallet was accidentally linked
+        to a member's email instead of the SACCO's Crossmint account.  Errors
+        and 404s are silently ignored so that order creation is not blocked.
+        """
+        user_locator = quote(f"email:{user_email}", safe="")
+        wallet_encoded = quote(wallet_address, safe="")
+        url = (
+            f"{self._api_base()}/api/{_WALLETS_API_VERSION}"
+            f"/users/{user_locator}/linked-wallets/{wallet_encoded}"
+        )
+        try:
+            response = requests.delete(url, headers=self._headers(), timeout=15)
+            if response.status_code in (200, 204, 404):
+                return  # success or not linked — either is fine
+            logger.warning(
+                "Unexpected status %d when unlinking treasury wallet from %s",
+                response.status_code,
+                user_email,
+            )
+        except requests.RequestException as exc:
+            logger.warning("Failed to unlink treasury wallet from %s: %s", user_email, exc)
 
     def create_payment_intent(
         self,
@@ -154,13 +187,27 @@ class CrossmintProvider(PaymentProvider):
         net_pool = round(amount_usd - fee_usd, 2)
 
         chain = token_locator.split(":", 1)[0] if ":" in token_locator else "solana"
-        # Attempt to link the treasury wallet.  If the wallet is already linked
-        # to any Crossmint user (HTTP 409), that is fine — the order can still
-        # be fulfilled.  The recipient.walletAddress field in the order payload
-        # is what Crossmint uses to route funds; the link step is only needed
-        # the very first time Crossmint sees an external wallet.
+
+        treasury_email = settings.crossmint_treasury_email
+        if not treasury_email:
+            raise ValueError(
+                "CROSSMINT_TREASURY_EMAIL is not configured. "
+                "Set it to the email of the SACCO's Crossmint account."
+            )
+
+        # If the treasury wallet was previously (wrongly) linked to a member's
+        # email, unlink it first so that the payment is not treated as a
+        # self-payment when the member's card is charged.
+        if receipt_email and receipt_email != treasury_email:
+            self._unlink_wallet_from_user(
+                user_email=receipt_email,
+                wallet_address=treasury,
+            )
+
+        # Link the treasury wallet to the SACCO's Crossmint account.
+        # This is idempotent: if already linked, Crossmint returns 409 and we proceed.
         self._link_wallet(
-            user_email=receipt_email,
+            user_email=treasury_email,
             wallet_address=treasury,
             chain=chain,
         )

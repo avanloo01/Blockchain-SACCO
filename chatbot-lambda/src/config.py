@@ -35,6 +35,10 @@ class Settings:
     solana_rpc_url: str = os.getenv("SOLANA_RPC_URL", "https://api.devnet.solana.com")
     crossmint_server_api_key: str = os.getenv("CROSSMINT_SERVER_API_KEY", "")
     crossmint_wallet_address: str = os.getenv("CROSSMINT_WALLET_ADDRESS", "") or os.getenv("SOLANA_TREASURY_ADDRESS", "")
+    # Email of the SACCO's Crossmint account.  The treasury wallet is linked to
+    # this account, NOT to individual members.  Must match the account that owns
+    # CROSSMINT_WALLET_ADDRESS in the Crossmint dashboard.
+    crossmint_treasury_email: str = os.getenv("CROSSMINT_TREASURY_EMAIL", "")
     crossmint_token_locator: str = os.getenv("CROSSMINT_TOKEN_LOCATOR") or _default_crossmint_token_locator(
         os.getenv("APP_ENV", "dev")
     )
