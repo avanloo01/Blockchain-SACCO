@@ -1,33 +1,36 @@
 #!/usr/bin/env python3
-"""Fix treasury wallet linkage in Crossmint.
+"""Fix treasury wallet linkage in Crossmint after a wallet address change.
 
-When the SACCO treasury wallet has been accidentally linked to a member's
-Crossmint user (instead of the SACCO's own Crossmint account), payments fail
-with "Payment could not be completed" (HTTP 400) because Crossmint treats it as
-a self-payment.
+When the SACCO rotates its treasury wallet (i.e. a new Solana address replaces
+the old one), the old address must be unlinked from the SACCO's Crossmint
+account and the new address linked in its place.  The email address of the
+Crossmint account does NOT change.
 
 This script:
-  1. Unlinks the treasury wallet from the wrong email (--from-email).
-  2. Re-links the treasury wallet to the SACCO's Crossmint account (CROSSMINT_TREASURY_EMAIL).
+  1. Unlinks the old wallet address (--old-wallet) from the treasury Crossmint
+     account (CROSSMINT_TREASURY_EMAIL).
+  2. Links the new wallet address (CROSSMINT_WALLET_ADDRESS) to the same
+     treasury Crossmint account.
 
 Usage
 -----
 Export the required environment variables, then run::
 
-    python scripts/fix_treasury_wallet_link.py --from-email wrong@example.com
+    python scripts/fix_treasury_wallet_link.py --old-wallet <OLD_BASE58_ADDRESS>
 
 Or inline::
 
     CROSSMINT_SERVER_API_KEY=sk_... \\
-    CROSSMINT_WALLET_ADDRESS=<base58 address> \\
+    CROSSMINT_WALLET_ADDRESS=<new base58 address> \\
     CROSSMINT_TREASURY_EMAIL=treasury@yoursacco.com \\
     APP_ENV=staging \\  # or prod
-    python scripts/fix_treasury_wallet_link.py --from-email wrong@example.com
+    python scripts/fix_treasury_wallet_link.py --old-wallet <OLD_BASE58_ADDRESS>
 
 Required environment variables
 -------------------------------
 CROSSMINT_SERVER_API_KEY   Server-side API key from the Crossmint dashboard.
-CROSSMINT_WALLET_ADDRESS   The treasury Solana wallet address (base58).
+CROSSMINT_WALLET_ADDRESS   The *new* treasury Solana wallet address (base58).
+                           This is the value stored in the GitHub secret.
 CROSSMINT_TREASURY_EMAIL   Email of the SACCO's Crossmint account.
 
 Optional environment variables
@@ -116,18 +119,21 @@ def link(base: str, api_key: str, email: str, wallet: str, chain: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Unlink treasury wallet from wrong Crossmint user and re-link to treasury."
+        description=(
+            "Unlink the old treasury wallet address from the Crossmint account "
+            "and link the new wallet address (CROSSMINT_WALLET_ADDRESS) in its place."
+        )
     )
     parser.add_argument(
-        "--from-email",
+        "--old-wallet",
         required=True,
-        metavar="EMAIL",
-        help="Email that the treasury wallet is currently (wrongly) linked to.",
+        metavar="ADDRESS",
+        help="Old treasury wallet address (base58) to unlink from the Crossmint account.",
     )
     args = parser.parse_args()
 
     api_key = os.getenv("CROSSMINT_SERVER_API_KEY", "")
-    wallet = os.getenv("CROSSMINT_WALLET_ADDRESS", "") or os.getenv("SOLANA_TREASURY_ADDRESS", "")
+    new_wallet = os.getenv("CROSSMINT_WALLET_ADDRESS", "")
     treasury_email = os.getenv("CROSSMINT_TREASURY_EMAIL", "")
     app_env = os.getenv("APP_ENV", "dev")
     token_locator = os.getenv("CROSSMINT_TOKEN_LOCATOR", "")
@@ -142,8 +148,8 @@ def main() -> None:
     errors: list[str] = []
     if not api_key:
         errors.append("CROSSMINT_SERVER_API_KEY is not set")
-    if not wallet:
-        errors.append("CROSSMINT_WALLET_ADDRESS (or SOLANA_TREASURY_ADDRESS) is not set")
+    if not new_wallet:
+        errors.append("CROSSMINT_WALLET_ADDRESS is not set")
     if not treasury_email:
         errors.append("CROSSMINT_TREASURY_EMAIL is not set")
     if errors:
@@ -151,32 +157,32 @@ def main() -> None:
             print(f"ERROR: {e}")
         sys.exit(1)
 
+    old_wallet = args.old_wallet
     base = _api_base(app_env)
-    from_email = args.from_email
 
-    print(f"\nEnvironment : {app_env} → {base}")
-    print(f"Wallet      : {wallet}")
-    print(f"Chain       : {chain}")
-    print(f"Unlink from : {from_email}")
-    print(f"Link to     : {treasury_email}\n")
+    print(f"\nEnvironment  : {app_env} → {base}")
+    print(f"Treasury email: {treasury_email}")
+    print(f"Chain        : {chain}")
+    print(f"Old wallet   : {old_wallet}")
+    print(f"New wallet   : {new_wallet}\n")
 
-    if from_email == treasury_email:
-        print("--from-email is the same as CROSSMINT_TREASURY_EMAIL; nothing to unlink.")
+    if old_wallet == new_wallet:
+        print("--old-wallet is the same as CROSSMINT_WALLET_ADDRESS; nothing to swap.")
         print("Verifying current link …")
-        url = _wallet_url(base, treasury_email, wallet)
+        url = _wallet_url(base, treasury_email, new_wallet)
         resp = requests.get(url, headers=_headers(api_key), timeout=15)
         if resp.ok:
             print("✓ Wallet is already correctly linked to the treasury account. No action needed.")
         else:
-            print("Wallet is NOT linked to the treasury account. Re-linking …")
-            link(base, api_key, treasury_email, wallet, chain)
+            print("Wallet is NOT linked to the treasury account. Linking …")
+            link(base, api_key, treasury_email, new_wallet, chain)
         return
 
-    print("Step 1 — unlink from wrong account")
-    unlink(base, api_key, from_email, wallet)
+    print("Step 1 — unlink old wallet from treasury account")
+    unlink(base, api_key, treasury_email, old_wallet)
 
-    print("\nStep 2 — link to treasury account")
-    link(base, api_key, treasury_email, wallet, chain)
+    print("\nStep 2 — link new wallet to treasury account")
+    link(base, api_key, treasury_email, new_wallet, chain)
 
     print("\nDone. You can now retry /contribute in Telegram.")
 
