@@ -116,10 +116,27 @@ class CrossmintProvider(PaymentProvider):
                 timeout=15,
             )
             if response.status_code == 409:
-                # Wallet is already linked to a Crossmint user — that is fine;
-                # it means a previous setup call succeeded.  Log and continue.
-                logger.info(
-                    "Treasury wallet already linked to a Crossmint user (409); proceeding."
+                # 409 means the wallet is already linked to *some* Crossmint user.
+                # Verify it is the correct user (treasury_email) so we don't silently
+                # proceed when the wallet is still attached to a member's account
+                # (which causes Crossmint to treat the payment as a self-payment).
+                verify = requests.get(url, headers=self._headers(), timeout=15)
+                if verify.ok:
+                    logger.info(
+                        "Treasury wallet already linked to treasury user (409); proceeding."
+                    )
+                    return
+                if verify.status_code == 404:
+                    raise ValueError(
+                        "Treasury wallet is linked to a different Crossmint user, not the "
+                        "SACCO treasury account. Unlink it from the current owner in the "
+                        "Crossmint dashboard, then retry."
+                    )
+                # Unexpected GET status — log and proceed rather than blocking entirely.
+                logger.warning(
+                    "409 when linking treasury wallet to treasury user; "
+                    "GET verification returned %d, proceeding anyway.",
+                    verify.status_code,
                 )
                 return
             if not response.ok:

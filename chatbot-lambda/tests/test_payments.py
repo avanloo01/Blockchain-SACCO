@@ -139,16 +139,22 @@ def test_verify_without_rpc_url(mock_settings):
 # ── Crossmint provider tests ────────────────────────────────────────
 
 
+@patch("src.services.payments.crossmint.requests.delete")
 @patch("src.services.payments.crossmint.requests.put")
 @patch("src.services.payments.crossmint.requests.post")
 @patch("src.services.payments.crossmint.settings")
-def test_crossmint_create_payment_intent(mock_settings, mock_post, mock_put):
+def test_crossmint_create_payment_intent(mock_settings, mock_post, mock_put, mock_delete):
     mock_settings.service_fee_percent = 1.0
     mock_settings.crossmint_server_api_key = "server_key_123"
     mock_settings.crossmint_wallet_address = "TreasuryWallet123"
     mock_settings.crossmint_token_locator = "solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
     mock_settings.website_url = "https://blockchainsacco.com"
     mock_settings.app_env = "dev"
+    mock_settings.crossmint_treasury_email = "treasury@sacco.com"
+
+    mock_delete_resp = MagicMock()
+    mock_delete_resp.status_code = 404
+    mock_delete.return_value = mock_delete_resp
 
     mock_link_resp = MagicMock()
     mock_link_resp.ok = True
@@ -190,10 +196,126 @@ def test_crossmint_create_payment_intent(mock_settings, mock_post, mock_put):
     assert payload["lineItems"][0]["executionParameters"]["mode"] == "exact-in"
     assert payload["lineItems"][0]["executionParameters"]["amount"] == "25.00"
     assert "slippageBps" not in payload["lineItems"][0]["executionParameters"]
-    # Wallet link should have been called before the order was created
+    # Wallet unlink (member) should have been attempted before link (treasury)
+    assert mock_delete.called
+    # Wallet link should target the treasury account, not the member
     assert mock_put.called
+    link_url = mock_put.call_args.args[0] if mock_put.call_args.args else mock_put.call_args.kwargs.get("url", "")
+    assert "treasury%40sacco.com" in link_url
+    assert "member%40example.com" not in link_url
     link_call_kwargs = mock_put.call_args.kwargs
     assert link_call_kwargs["json"]["chain"] == "solana"
+
+
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_create_intent_raises_without_treasury_email(mock_settings):
+    mock_settings.crossmint_server_api_key = "server_key_123"
+    mock_settings.crossmint_wallet_address = "TreasuryWallet123"
+    mock_settings.crossmint_token_locator = "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    mock_settings.service_fee_percent = 1.0
+    mock_settings.crossmint_treasury_email = ""
+
+    provider = CrossmintProvider()
+    try:
+        provider.create_payment_intent(
+            amount_usd=10.0,
+            member_id="chat-1",
+            receipt_email="member@example.com",
+        )
+        assert False, "Should have raised ValueError"
+    except ValueError as exc:
+        assert "CROSSMINT_TREASURY_EMAIL" in str(exc)
+
+
+@patch("src.services.payments.crossmint.requests.get")
+@patch("src.services.payments.crossmint.requests.delete")
+@patch("src.services.payments.crossmint.requests.put")
+@patch("src.services.payments.crossmint.requests.post")
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_link_wallet_409_already_linked_to_treasury(
+    mock_settings, mock_post, mock_put, mock_delete, mock_get
+):
+    """409 from PUT + GET returns 200 → wallet confirmed linked to treasury → proceed."""
+    mock_settings.service_fee_percent = 1.0
+    mock_settings.crossmint_server_api_key = "server_key_123"
+    mock_settings.crossmint_wallet_address = "TreasuryWallet123"
+    mock_settings.crossmint_token_locator = "solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+    mock_settings.website_url = "https://blockchainsacco.com"
+    mock_settings.app_env = "dev"
+    mock_settings.crossmint_treasury_email = "treasury@sacco.com"
+
+    mock_delete_resp = MagicMock()
+    mock_delete_resp.status_code = 404
+    mock_delete.return_value = mock_delete_resp
+
+    mock_put_resp = MagicMock()
+    mock_put_resp.ok = True
+    mock_put_resp.status_code = 409
+    mock_put.return_value = mock_put_resp
+
+    mock_get_verify = MagicMock()
+    mock_get_verify.ok = True
+    mock_get_verify.status_code = 200
+    mock_get.return_value = mock_get_verify
+
+    mock_order_resp = MagicMock()
+    mock_order_resp.ok = True
+    mock_order_resp.json.return_value = {
+        "clientSecret": "cs_test",
+        "order": {"orderId": "order-409-ok"},
+    }
+    mock_post.return_value = mock_order_resp
+
+    provider = CrossmintProvider()
+    intent = provider.create_payment_intent(
+        amount_usd=10.0,
+        member_id="chat-1",
+        receipt_email="member@example.com",
+    )
+    assert intent.intent_id == "order-409-ok"
+
+
+@patch("src.services.payments.crossmint.requests.get")
+@patch("src.services.payments.crossmint.requests.delete")
+@patch("src.services.payments.crossmint.requests.put")
+@patch("src.services.payments.crossmint.settings")
+def test_crossmint_link_wallet_409_linked_to_wrong_user(
+    mock_settings, mock_put, mock_delete, mock_get
+):
+    """409 from PUT + GET returns 404 → wallet linked to wrong user → raise clear error."""
+    mock_settings.service_fee_percent = 1.0
+    mock_settings.crossmint_server_api_key = "server_key_123"
+    mock_settings.crossmint_wallet_address = "TreasuryWallet123"
+    mock_settings.crossmint_token_locator = "solana:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+    mock_settings.website_url = "https://blockchainsacco.com"
+    mock_settings.app_env = "dev"
+    mock_settings.crossmint_treasury_email = "treasury@sacco.com"
+
+    mock_delete_resp = MagicMock()
+    mock_delete_resp.status_code = 404
+    mock_delete.return_value = mock_delete_resp
+
+    mock_put_resp = MagicMock()
+    mock_put_resp.ok = True
+    mock_put_resp.status_code = 409
+    mock_put.return_value = mock_put_resp
+
+    mock_get_verify = MagicMock()
+    mock_get_verify.ok = False
+    mock_get_verify.status_code = 404
+    mock_get.return_value = mock_get_verify
+
+    provider = CrossmintProvider()
+    try:
+        provider.create_payment_intent(
+            amount_usd=10.0,
+            member_id="chat-1",
+            receipt_email="member@example.com",
+        )
+        assert False, "Should have raised ValueError"
+    except ValueError as exc:
+        assert "different Crossmint user" in str(exc)
+        assert "Crossmint dashboard" in str(exc)
 
 
 @patch("src.services.payments.crossmint.settings")
