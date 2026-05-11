@@ -100,7 +100,12 @@ def get_pending_repayment_for_member(member_id: str) -> RepaymentSchedule | None
 
 
 def mark_repayment_paid(repayment_id: str) -> RepaymentSchedule:
-    """Mark a repayment schedule row as settled."""
+    """Mark a repayment schedule row as settled.
+
+    If all installments for the parent loan are now paid, the loan is
+    transitioned to status ``"repaid"`` so it is excluded from outstanding
+    principal calculations.
+    """
     db = get_db()
     row = db.repaymentschedule.update(
         where={"id": repayment_id},
@@ -110,6 +115,18 @@ def mark_repayment_paid(repayment_id: str) -> RepaymentSchedule:
         },
     )
     logger.info("Repayment marked paid id=%s", repayment_id)
+
+    # Close the loan when every installment has been paid.
+    remaining = db.repaymentschedule.count(
+        where={"loanRequestId": row.loanRequestId, "status": {"not": "paid"}}
+    )
+    if remaining == 0:
+        db.loanrequest.update(
+            where={"id": row.loanRequestId},
+            data={"status": "repaid"},
+        )
+        logger.info("Loan fully repaid id=%s", row.loanRequestId)
+
     return row
 
 
