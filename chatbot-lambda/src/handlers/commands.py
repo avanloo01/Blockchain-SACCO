@@ -9,6 +9,7 @@ from src.repositories.billing_repo import (
     mark_billing_settled,
 )
 from src.repositories.governance_repo import cast_vote, get_vote_tally, list_open_vote_loans
+from src.services.solana_vote import anchor_vote_on_chain
 from src.repositories.loan_repo import (
     approve_loan,
     create_loan_request,
@@ -433,11 +434,14 @@ def dispatch_command(chat_id: str, text: str) -> str:
         if choice not in {"yes", "no"}:
             return "Invalid vote. Use yes or no. Example: /vote <loan_id> yes"
 
-        cast_vote(loan_id=loan_id, member_id=member.id, vote=choice)
+        tx_sig = anchor_vote_on_chain(loan_id=loan_id, member_id=member.id, vote=choice)
+        cast_vote(loan_id=loan_id, member_id=member.id, vote=choice, tx_signature=tx_sig)
         tally = get_vote_tally(loan_id=loan_id)
+        on_chain_note = f"\nOn-chain ref: {tx_sig[:16]}..." if tx_sig else ""
         return (
             f"Vote recorded: {choice.upper()} for loan {loan_id[:8]}...\n"
             f"Current tally -> Yes: {tally['yes']} | No: {tally['no']} | Total: {tally['total']}"
+            f"{on_chain_note}"
         )
 
     return "Unknown command. Supported: /start, /help, /status, /wallet, /contribute, /verify, /loan, /repay, /proposals, /vote."

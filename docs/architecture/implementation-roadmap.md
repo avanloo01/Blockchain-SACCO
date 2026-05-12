@@ -64,7 +64,7 @@ These items are out of scope for the MVP and should be tackled after the testnet
 - Refund / reversal logic on PaymentProvider base class.
 - Advanced risk scoring (contribution consistency, repayment speed, debt exposure) replacing the simple `risk_tier` parameter.
 - SQS dead-letter queue and retry worker for failed scheduled jobs.
-- On-chain governance (post vote results to Solana, indexer to sync back).
+- ~~On-chain governance (post vote results to Solana, indexer to sync back).~~ **Done** — each `/vote` now posts a signed Solana Memo transaction (`governance:vote:<loan_id>:<member_id>:<yes|no>`); signature stored in `governance_votes.tx_signature`.
 
 ## Payment Module Swap Plan
 

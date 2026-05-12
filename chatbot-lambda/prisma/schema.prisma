@@ -114,6 +114,7 @@ model GovernanceVote {
   loanRequestId String   @map("loan_request_id")
   memberId      String   @map("member_id")
   vote          String
+  txSignature   String?  @map("tx_signature")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

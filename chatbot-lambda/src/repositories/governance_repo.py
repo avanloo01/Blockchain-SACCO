@@ -24,7 +24,7 @@ def list_open_vote_loans(limit: int = 10) -> list[dict[str, str | float]]:
     ]
 
 
-def cast_vote(loan_id: str, member_id: str, vote: str) -> None:
+def cast_vote(loan_id: str, member_id: str, vote: str, tx_signature: str | None = None) -> None:
     """Create or update a member vote for a given governance loan."""
     db = get_db()
     existing = db.governancevote.find_first(
@@ -36,16 +36,17 @@ def cast_vote(loan_id: str, member_id: str, vote: str) -> None:
                 "loanRequestId": loan_id,
                 "memberId": member_id,
                 "vote": vote,
+                "txSignature": tx_signature,
             }
         )
-        logger.info("Governance vote created loan=%s member=%s vote=%s", loan_id, member_id, vote)
+        logger.info("Governance vote created loan=%s member=%s vote=%s tx=%s", loan_id, member_id, vote, tx_signature)
         return
 
     db.governancevote.update(
         where={"id": existing.id},
-        data={"vote": vote},
+        data={"vote": vote, "txSignature": tx_signature},
     )
-    logger.info("Governance vote updated loan=%s member=%s vote=%s", loan_id, member_id, vote)
+    logger.info("Governance vote updated loan=%s member=%s vote=%s tx=%s", loan_id, member_id, vote, tx_signature)
 
 
 def get_vote_tally(loan_id: str) -> dict[str, int]:
