@@ -53,19 +53,17 @@ The platform has two interfaces:
 - Repayment due reminders and escalation notifications.
 - Telegram delivery tracking and retries.
 
-7. Indexer and Analytics Service:
-- Reads Solana events and stores query-friendly snapshots.
-- Feeds website dashboard and bot account summaries.
+7. Analytics (MVP: direct DB aggregation):
+- Pool metrics (balance, utilization, repayment rate) aggregated server-side from PostgreSQL.
+- No separate chain indexer in MVP; on-chain vote signatures stored in `governance_votes.tx_signature`.
 
 ## Suggested Deployment Topology
 
-- AWS: chatbot APIs, schedulers, worker queues, risk jobs, webhook handlers.
-- Vercel: website UI + light API routes.
-- Solana: smart contract program + treasury vault accounts.
+- AWS: chatbot Lambda (webhook + 3 EventBridge-scheduled functions), SAM deployment.
+- Vercel: website UI + serverless API routes.
+- Solana devnet: treasury wallet for USDC contributions and loan disbursements; Memo program for on-chain governance votes.
 - Data:
-  - PostgreSQL for operational state.
-  - S3 for immutable report snapshots.
-  - Optional Postgres (later) for analytics and governance history.
+  - PostgreSQL (Supabase) for all operational state.
 
 ## Data Ownership
 
@@ -89,15 +87,14 @@ The platform has two interfaces:
 
 ## Open Decisions (for next iteration)
 
-- Embedded wallet provider is Circle Programmable Wallets, while still supporting non-custodial Solana wallets.
-- Governance threshold is fixed at 100 USD in MVP (vote required if loan is larger than 100 USD).
-- Governance voting is on-chain in MVP.
+- Advanced risk scoring (contribution consistency, repayment speed, debt exposure) to replace the current simple `risk_tier` input.
+- SQS dead-letter queue and retry worker for failed scheduled jobs.
+- Solana mainnet migration (config-only switch once testnet pilot acceptance criteria are met).
 - Region-specific compliance flows for Sub-Saharan launch.
 
-## Wallet Strategy Decision
+## Wallet Strategy
 
-- Preferred embedded wallet provider: Circle Programmable Wallets.
-- Rationale:
-  - Solana compatibility aligns with the core chain choice.
-  - Better fit for global, stablecoin-first operations than Coinbase Smart Wallets, which are more EVM ecosystem oriented.
-  - Works with a dual UX where advanced users can connect non-custodial wallets directly.
+- Members supply their own non-custodial Solana wallet address during website signup or via `/wallet` in the bot.
+- No embedded or custodial wallets in MVP.
+- Loans are disbursed directly from the SACCO treasury wallet to the member's saved address via SPL token transfer.
+- The SACCO treasury uses a separate Crossmint-managed wallet for receiving card checkout payments.

@@ -11,27 +11,27 @@
 
 1. API Gateway + Lambda webhook:
 - Receives Telegram updates.
-- Verifies source and routes command handlers.
+- Verifies webhook secret header and per-chat-id rate limit.
+- Rejects stale updates (message date older than 60 seconds).
+- Routes to command handlers.
 
-2. Lambda command handlers:
-- `/start`, `/profile`, `/contribute`, `/loan`, `/loan_status`, `/repay`.
+2. Lambda command handlers (`TelegramWebhookFunction`):
+- `/start`, `/help`, `/status`, `/wallet`, `/contribute`, `/verify`, `/loan`, `/loan_status`, `/repay`, `/proposals`, `/vote`.
 
 3. EventBridge schedules:
-- Monthly billing cycle trigger.
-- Daily repayment reminder checks.
+- Monthly billing cycle trigger — 1st of month at 07:00 UTC (`MonthlyContributionFunction`).
+- Daily repayment reminder checks — daily at 07:00 UTC (`RepaymentReminderFunction`).
+- Daily payment reconciliation — daily at 06:00 UTC (`PaymentReconciliationFunction`).
 
-4. SQS queue + worker Lambda:
-- Async delivery of high-volume reminders.
-- Retry and dead letter queue handling.
-
-5. PostgreSQL (Supabase) tables:
+4. PostgreSQL (Supabase) tables via Prisma ORM:
 - `members`
 - `billing_intents`
 - `loan_requests`
 - `repayment_schedules`
 - `message_delivery`
+- `governance_votes`
 
-6. Secrets Manager + KMS:
+5. Secrets Manager + KMS:
 - Telegram bot token.
 - Service API credentials.
 
@@ -69,7 +69,7 @@
 
 ## Payment Profit Policy (MVP)
 
-- Use direct stablecoin transfer payment intents.
-- Add a transparent service fee per contribution or repayment action.
-- Record fee and net pool amount separately in ledger events.
-- Show fee disclosure in Telegram before transaction confirmation.
+- All contributions go through Crossmint card checkout (USDC delivered to treasury wallet) or direct Solana USDC transfer.
+- A transparent service fee (default 1% of contribution amount) is deducted; net-to-pool and fee amounts are recorded separately on each `billing_intent`.
+- Loan disbursements are sent directly from the treasury wallet to the member's saved Solana address via SPL token transfer.
+- Fee disclosure is shown in the Telegram message before the member proceeds to checkout.

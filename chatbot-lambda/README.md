@@ -5,10 +5,10 @@ Python AWS Lambda service for Telegram SACCO operations.
 ## Architecture Decisions Locked
 
 - Contribution checkout: Crossmint card checkout delivering USDC to the SACCO treasury wallet.
-- Embedded wallet option: Circle Programmable Wallets.
-- Governance threshold: loans above 100 USD go to on-chain vote lane.
+- Member wallets: members supply their own non-custodial Solana wallet address (via website signup or `/wallet` command). No embedded or custodial wallets.
+- Governance threshold: loans above 100 USD go to on-chain vote lane; votes are anchored as signed Solana Memo transactions.
 - Pool liquidity safety: total lent amount cannot exceed 60% of pool.
-- Profit model: transparent service fee on transactions.
+- Profit model: transparent service fee (default 1%) on each contribution.
 
 ## Folder Structure
 
@@ -28,9 +28,15 @@ Python AWS Lambda service for Telegram SACCO operations.
 	- `pip install -r requirements.txt`
 3. Generate the Prisma client:
 	- `python3 -m prisma generate --schema prisma/schema.prisma`
-4. Copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN`, `CROSSMINT_SERVER_API_KEY`, and the treasury wallet settings.
-	- Set `CROSSMINT_RECIPIENT_EMAIL` to the SACCO treasury email address (e.g. `arthurvl@duck.com`) for Crossmint checkout.
-	- Keep `SOLANA_TREASURY_ADDRESS` for direct Solana transfer flows.
+4. Copy `.env.example` to `.env` and populate the required variables:
+	- `TELEGRAM_BOT_TOKEN` — Telegram bot token from @BotFather.
+	- `CROSSMINT_SERVER_API_KEY` — Crossmint server-side API key.
+	- `CROSSMINT_WALLET_ADDRESS` — Crossmint-managed SACCO treasury wallet address.
+	- `CROSSMINT_TREASURY_EMAIL` — email of the Crossmint account that owns the treasury wallet.
+	- `SOLANA_TREASURY_ADDRESS` — raw Solana treasury wallet address (used for direct disbursements).
+	- `SOLANA_TREASURY_PRIVATE_KEY` — base58 private key of the treasury wallet for signing disbursements.
+	- `SOLANA_USDC_MINT` — USDC mint address for direct disbursements (dev default: SPL Token Faucet USDC-Dev).
+	- `DATABASE_URL` / `DIRECT_URL` — Supabase PostgreSQL connection strings.
 5. Run tests:
 	- `pytest`
 
@@ -48,9 +54,29 @@ Python AWS Lambda service for Telegram SACCO operations.
 - Optional secret header:
 	- Set `TELEGRAM_WEBHOOK_SECRET` in environment/template and Telegram will include `X-Telegram-Bot-Api-Secret-Token`.
 
-## Next Implementation Steps
+## Lambda Functions
 
-- Wire PostgreSQL (or Supabase Postgres) repositories.
-- Integrate Telegram sendMessage API in command responses.
-- Add webhook-driven payment confirmation for hosted checkout.
-- Add on-chain governance proposal and vote tracking.
+Four Lambda functions are deployed via `template.yaml`:
+
+| Function | Handler | Trigger |
+|---|---|---|
+| `TelegramWebhookFunction` | `src.app.lambda_handler` | API Gateway POST `/telegram/webhook` |
+| `MonthlyContributionFunction` | `src.scheduled.monthly_contribution_handler` | EventBridge cron — 1st of month at 07:00 UTC |
+| `RepaymentReminderFunction` | `src.scheduled.repayment_reminder_handler` | EventBridge cron — daily at 07:00 UTC |
+| `PaymentReconciliationFunction` | `src.scheduled.payment_reconciliation_handler` | EventBridge cron — daily at 06:00 UTC |
+
+## Bot Commands
+
+| Command | Description |
+|---|---|
+| `/start` | Welcome message and signup prompt |
+| `/help` | List all available commands |
+| `/status` | Membership summary (months active, contributions, wallet) |
+| `/wallet <address>` | Save or update your Solana wallet address for loan payouts |
+| `/contribute [amount]` | Start a USDC contribution via Crossmint checkout (default 20 USD) |
+| `/verify <intent_id>` | Confirm a completed Crossmint payment |
+| `/loan <amount> <months>` | Request a loan (evaluated against policy + pool state) |
+| `/loan_status` | View status of your most recent loan request |
+| `/repay` | Get a payment link for the next due installment |
+| `/proposals` | List active governance proposals |
+| `/vote <loan_id> yes\|no` | Cast an on-chain governance vote (Solana Memo transaction) |

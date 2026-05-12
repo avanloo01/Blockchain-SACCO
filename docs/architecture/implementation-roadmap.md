@@ -1,11 +1,11 @@
-# Implementation Roadmap (4 to 6 Weeks MVP)
+# Implementation Roadmap (MVP — Complete)
 
 ## Delivery Strategy
 
-- Sequence priority: Telegram webhook in production first, then database wiring in a later session when Supabase credentials are available.
-- Payments strategy: testnet-first implementation to validate flows without risking funds.
-- Integration strategy: payment logic is provider-agnostic so Solana USDC links can later be swapped for Paystack, Stripe, or other payment links with minimal code changes.
-- Wallet strategy: users provide their own Solana wallet address during website registration. No embedded or custodial wallets.
+- Sequence priority: Telegram webhook in production first, then database wiring once Supabase credentials were available.
+- Payments strategy: testnet-first implementation; Crossmint staging + Solana devnet used throughout MVP.
+- Integration strategy: payment logic is provider-agnostic; adapters for `crossmint` and `solana_testnet` implemented behind a shared `PaymentProvider` interface.
+- Wallet strategy: members supply their own non-custodial Solana wallet address. No embedded or custodial wallets.
 
 ## Phase 1: Bot Runtime and Webhook Go-Live (Week 1) [DONE]
 

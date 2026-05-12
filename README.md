@@ -9,19 +9,19 @@ Architecture and product design docs are in `docs/architecture`.
 
 ## Project Goals
 
-- Enable monthly SACCO contributions via stablecoin links.
+- Enable monthly SACCO contributions via Crossmint card checkout (USDC).
 - Allow eligible members to request and receive loans from the shared pool.
 - Provide transparent, auditable pool metrics with privacy protections.
-- Launch MVP in 4 to 6 weeks for first cohort of 20 to 50 users.
+- MVP is feature-complete and deployed; currently in devnet pilot phase.
 
 ## High-Level Stack
 
-- Chatbot: Python, AWS Lambda, API Gateway, EventBridge, DynamoDB, SQS.
-- Website: Next.js on Vercel (App Router), static pages + serverless API routes.
-- Blockchain: Solana smart contract (program), USDC settlement.
-- Payments: Stablecoin transfers (primary), x402 style pay links abstraction.
-- Governance: Hybrid automated scoring + community vote for larger loans.
-- Identity: Light KYC (email + phone), personal details private.
+- Chatbot: Python, AWS Lambda, API Gateway, EventBridge, Prisma ORM + PostgreSQL (Supabase).
+- Website: Next.js on Vercel (App Router), static pages + serverless API routes, NextAuth session handling.
+- Blockchain: Solana (devnet), USDC settlement, on-chain governance via Memo transactions.
+- Payments: Crossmint card checkout (primary, USDC delivered to treasury wallet) + direct Solana USDC transfers for loan disbursements.
+- Governance: Auto-approval lane (≤ $100 USD, low risk) + on-chain community vote lane (> $100 USD); votes anchored as signed Solana Memo transactions.
+- Identity: Light KYC (email + phone verified), personal details off-chain and access-controlled; members supply their own non-custodial Solana wallet address.
 
 ## Architecture Docs
 
